@@ -1,0 +1,233 @@
+% This is a template for Ph.D. dissertations in the UCI format.
+% 
+% All fonts, including those for sub- and superscripts, must be 10
+% points or larger.  Recommended sizes are 14-point for chapter
+% headings, 12-point for the main body of text and figure/table
+% titles, and 10-point for footnotes, sub- and super-scripts, and text
+% in figures and tables.
+%
+% Notes: Add short title to figures, sections, via square brackets,
+% e.g. \section[short]{long}.
+%
+\documentclass[12pt,fleqn]{ucithesis}
+
+% A few common packages
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{array}
+\usepackage{graphicx}
+\graphicspath{ {artwork/} }
+
+\usepackage[round,sort,authoryear]{natbib}
+% \usepackage{natbib}
+% \usepackage[authoryear]{natbib}
+
+\usepackage{epigraph} % quotations
+
+\usepackage{relsize}
+\usepackage{bm}      % for \bm macro
+\usepackage[binary-units=true]{siunitx}
+
+% Some other useful packages
+\usepackage{caption}
+\usepackage{subcaption}  % \begin{subfigure}...\end{subfigure} within figure
+
+\usepackage{multirow}
+\usepackage{tabularx}
+\usepackage{afterpage}
+
+% use greek letters in text
+\usepackage[euler]{textgreek}
+
+\usepackage[newfloat]{minted}
+\usepackage{listings}
+\usepackage{minted}
+\usemintedstyle{borland}
+\setminted{frame=lines, framesep=2mm, baselinestretch=1.2, 
+	fontsize=\footnotesize, linenos}
+\DeclareCaptionFormat{listing}{\parbox{\textwidth}{#1#2#3}}
+\captionsetup[listing]{format=listing, singlelinecheck=false, margin=0pt, font={bf,footnotesize}}
+
+% white listing caption in gray colorbox
+% http://stackoverflow.com/questions/741985/latex-source-code-listing-like-in-professional-books
+% \DeclareCaptionFont{white}{\color{white}}
+% \DeclareCaptionFormat{listing}{\colorbox[cmyk]{0.43, 0.35, 0.35,0.01}{\parbox{\textwidth}{#1#2#3}}}
+% \captionsetup[listing]{format=listing,labelfont=white,textfont=white, singlelinecheck=false, margin=0pt, font={bf,footnotesize}}
+
+\usepackage{rotating}
+\usepackage{booktabs}
+
+\usepackage[acronym,toc,shortcuts]{glossaries}
+
+% plainpages=false fixes the "duplicate ignored" error with page counters
+% Set pdfborder to 0 0 0 to disable colored borders around PDF hyperlinks
+\usepackage[plainpages=false,pdfborder={0 0 0}]{hyperref}
+
+% Uncomment the following two lines to use the algorithm package,
+% which provides an algorithm environment similar to figure and table
+% ("\begin{algorithm}...\end{algorithm}"). A list of algorithms will
+% automatically be added in the preliminary pages. Note that you
+% probably want a package for the actual code to go with this (e.g.,
+% algorithmic).
+%\usepackage{algorithm}
+%\renewcommand{\listalgorithmname}{\protect\centering\protect\Large LIST OF ALGORITHMS}
+
+% Uncomment the following line to enable Unicode support. This will allow you
+% to enter non-ASCII characters (such as accented characters) directly without
+% having to use LaTeX's awkward escape syntax (e.g., \'{e})
+% NOTE: You may have to install the ucs.sty package for this to work. See:
+% http://www.unruh.de/DniQ/latex/unicode/
+%\usepackage[utf8x]{inputenc}
+
+% Uncomment the following to avoid "widowing", where page breaks cause
+% single lines of paragraphs to float onto the next page (this is not
+% a UCI requirement but more of an aesthetic choice).
+%\widowpenalty=10000
+%\clubpenalty=10000
+
+\makeatletter
+\g@addto@macro\normalsize{%
+  \setlength\abovedisplayskip{6pt}
+  \setlength\belowdisplayskip{6pt}
+  \setlength\abovedisplayshortskip{6pt}
+  \setlength\belowdisplayshortskip{6pt}
+}
+\makeatother
+
+
+
+% Macros
+\newcommand{\matr}[1]{\mathbf{#1}}     % ISO complying version
+\newcommand{\iid}{i.i.d.}
+
+% % bold vectors
+% \renewcommand{\vec}[1]{\mathbf{#1}}
+% \let\oldhat\hat
+% \renewcommand{\hat}[1]{\oldhat{\mathbf{#1}}}
+
+% Modify or extend these at will.
+\newtheorem{theorem}{\textsc{Theorem}}[chapter]
+\newtheorem{definition}{\textsc{Definition}}[chapter]
+\newtheorem{example}{\textsc{Example}}[chapter]
+
+% Macros for title, author, abstract, etc.
+\input{preliminaries}
+
+% Add PDF document info fields
+\hypersetup{
+	pdftitle={\Thesistitle},
+	pdfauthor={\Authorname},
+	pdfsubject={\Degreefield},
+}
+
+% Uncomment the following to have numbered subsubsections (by default
+% numbering goes only to subsections).
+\setcounter{secnumdepth}{4}
+
+
+% Set this to only select a subset of the includes directives below.
+% Very handy to speed up compilation if you're working on a certain
+% part of your thesis. It conserves page numbers, references, etc.
+% even for non-included files.
+\includeonly{introduction,background,chapterSNN,chapterME,chapterMT,chapterABR,chapterMSTd,conclusion}
+
+\newacronym{2AFC}{2AFC}{Two-Alternative Forced Choice}
+\newacronym{ABR}{ABR}{Android Based Robotics}
+\newacronym{AER}{AER}{Adress Event Representation}
+\newacronym{API}{API}{Application Programming Interface}
+\newacronym{CARL}{CARL}{Cognitive Anteater Robotics Laboratory}
+\newacronym{CDS}{CDS}{Component-Direction-Selective}
+\newacronym{CLAHE}{CLAHE}{Contrast-Limited Adaptive Histogram Equalization}
+\newacronym{COBA}{COBA}{Conductance-Based}
+\newacronym{COM}{COM}{Center of Motion}
+\newacronym{CPU}{CPU}{Central Processing Unit}
+\newacronym{CSv}{CSv}{Cingulate Sulcus Visual Region}
+\newacronym{CUBA}{CUBA}{Current-Based}
+\newacronym{CUDA}{CUDA}{Compute Unified Device Architecture}
+\newacronym{ECH}{ECH}{Efficient Coding Hypothesis}
+\newacronym{EEG}{EEG}{Electroencephalography}
+\newacronym{FFT}{FFT}{Fast Fourier Transform}
+\newacronym{FOE}{FOE}{Focus of Expansion}
+\newacronym{FST}{FST}{Floor of the Superior Temporal visual area}
+\newacronym{fMRI}{fMRI}{functional Magnetic Resonance Imaging}
+\newacronym{FS}{FS}{Fast Spiking}
+\newacronym{GPU}{GPU}{Graphics Processing Unit}
+\newacronym{HSV}{HSV}{Hue, Saturation, Value}
+\newacronym{HTI}{HTI}{Heading Tuning Index}
+\newacronym{ICA}{ICA}{Independent Component Analysis}
+\newacronym{IOC}{IOC}{Intersection-Of-Constraints}
+\newacronym{IPS}{IPS}{Intraparietal Sulcus}
+\newacronym{LGN}{LGN}{Lateral Geniculate Nucleus}
+\newacronym{LIF}{LIF}{Leaky Integrate-and-Fire}
+\newacronym{LIP}{LIP}{Lateral Intraparietal area}
+\newacronym{LTD}{LTD}{Long-Term Depression}
+\newacronym{LTP}{LTP}{Long-Term Potentiation}
+\newacronym{ME}{ME}{Motion Energy}
+\newacronym{MEG}{MEG}{Magnetoencephalography}
+\newacronym{MST}{MST}{Medial Superior Temporal area}
+\newacronym{MSTd}{MSTd}{the dorsal subregion of the Medial Superior Temporal area}
+\newacronym{MSTv}{MSTv}{the ventral subregion of the Medial Superior Temporal area}
+\newacronym{MT}{MT}{Middle Temporal area}
+\newacronym{NEF}{NEF}{Neural Engineering Framework}
+\newacronym{NMF}{NMF}{Nonnegative Matrix Factorization}
+\newacronym{OAT}{OAT}{Offline Analysis Toolbox}
+\newacronym{ODE}{ODE}{Ordinary Differential Equation}
+\newacronym{PCA}{PCA}{Principal Component Analysis}
+\newacronym{PDS}{PDS}{Pattern-Direction-Selective}
+\newacronym{PPC}{PPC}{Posterior Parietal Cortex}
+\newacronym{PWM}{PWM}{Pulse-Width Modulation}
+\newacronym{RAM}{RAM}{Random-Access Memory}
+\newacronym{RDK}{RDK}{Random Dot Kinematogram}
+\newacronym{RF}{RF}{Receptive Field}
+\newacronym{RS}{RS}{Regular Spiking}
+\newacronym{RT}{RT}{Reaction Time}
+\newacronym{SM}{SM}{Streaming Multiprocessor}
+\newacronym{SNN}{SNN}{Spiking Neural Network}
+\newacronym{SPL}{SPL}{Superior Parietal Lobe}
+\newacronym{STDP}{STDP}{Spike-Timing Dependent Plasticity}
+\newacronym{STP}{STP}{Short-Term Plasticity}
+\newacronym{TCP}{TCP}{Transmission Control Protocol}
+\newacronym{UDP}{UDP}{User Datagram Protocol}
+\newacronym{V1}{V1}{Primary Visual Cortex}
+\newacronym{VA}{VA}{Vector Average}
+\newacronym{VIP}{VIP}{Ventral Intraparietal area}
+
+\begin{document}
+
+% Preliminary pages are always loaded (TOC, CV, etc.)
+\preliminarypages
+
+% Include the different components of your thesis, in separate files.
+% Using \include allows you to set \includeonly above.
+\include{introduction}
+\include{background}
+\include{chapterSNN}
+\include{chapterME}
+\include{chapterMT}
+\include{chapterABR}
+\include{chapterMSTd}
+\include{conclusion}
+
+
+% These commands fix an odd problem in which the bibliography line
+% of the Table of Contents shows the wrong page number.
+\clearpage
+\phantomsection
+
+% "References should be formatted in style most common in discipline",
+% abbrv is only a suggestion.
+% \bibliographystyle{abbrv}
+\bibliographystyle{plainnat}
+\bibliography{thesis}
+
+% The Thesis Manual says not to include appendix figures and tables in
+% the List of Figures and Tables, respectively, so these commands from
+% the caption package turn it off from this point onwards. If needed,
+% it can be re-enabled later (using list=yes argument).
+\captionsetup[figure]{list=no}
+\captionsetup[table]{list=no}
+
+% If you have an appendix, it should come after the references.
+\include{appendix}
+
+\end{document}

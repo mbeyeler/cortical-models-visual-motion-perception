@@ -1,0 +1,91 @@
+\chapter{Summary and Conclusion}
+\label{ch:conclusion}
+
+Simulating large-scale models of biological motion
+perception is challenging, due to the required memory to store
+the network structure and the computational power needed to
+quickly solve the neuronal dynamics.
+In Chapters~\ref{ch:SNN} and \ref{ch:ME} I introduced software that
+enabled the practical feasibility of most of the research presented in
+this thesis.
+CARLsim allowed us to simulate meso-scale neural networks 
+(on the order of $10^5$ neurons and $10^7$ synapses) that require 
+a high degree of biological detail without sacrificing performance.
+Analogously, development of an efficient and scalable implementation of
+the Motion Energy model \citep{SimoncelliHeeger1998} was necessary in order
+to handle video streams ($\sim 360 \times 480$ pixels) of up to 
+$30$ frames per second in (quasi) real time.
+These software efforts allowed us to embody the computational models
+presented in this thesis on a neurorobotics platform so that we could
+investigate the link between simulated neural circuitry and real-world
+robot behavior.
+All software was released under open-source licenses,
+making it freely and openly available for other researchers to use the
+software, adapt it for their purposes, and expand for future studies.
+
+In Chapter~\ref{ch:MT}, I presented a large-scale spiking model 
+of visual area \ac{MT} that 1) was capable of exhibiting both component and
+pattern motion selectivity, 2) generated speed tuning curves that were in
+agreement with electrophysiological data, 
+and 3) emulated human choice accuracy and the effect of motion strength 
+on reaction time in a motion discrimination task.
+Although the model was able to demonstrate how the aperture problem could
+be solved with solely biologically plausible mechanisms and network dynamics,
+future studies could investigate how the model might generalize to more
+perceptually challenging stimuli that include transparent motion,
+second-order motion, or binocular cues.
+
+In Chapter~\ref{ch:ABR}, I described the deployment of the model outlined
+in Chapter~\ref{ch:MT} on a robotics platform, used to steer the robot
+around obstacles toward a visually salient target.
+The study demonstrated how a model of \ac{MT} might build a cortical
+representation of optic flow in the spiking domain, and showed that these
+simulated motion signals were sufficient to steer the robot on human-like
+smooth paths around obstacles in the real world.
+In the future, it would be interesting to see the model being extended
+to cortical areas beyond \ac{MT}, in order to investigate the functional
+real-world implications of visual motion processing in higher-order areas
+of the motion pathway.
+
+Finally, Chapter~\ref{ch:MSTd} introduced a novel computational model
+of optic flow processing in \ac{MSTd} based on ideas from the 
+efficient-coding and free-energy principles. 
+I demonstrated that a variety of visual response properties of \ac{MSTd}
+neurons could be derived from \ac{MT}-like input features using \ac{NMF},
+suggesting that response properties such as 3D translation and rotation
+selectivity, complex motion perception, and heading selectivity might 
+simply be a by-product of \ac{MSTd} performing dimensionality reduction 
+on their inputs.
+Despite its simplicity, the model was able to explain a variety of
+\ac{MSTd} visual response properties, ranging from single-unit activity to
+population statistics.
+These findings provide a further step towards a scientific understanding
+of the often nonintuitive response properties of \ac{MSTd} neurons.
+In the future, this work might lead to new intellectual property (patent pending)
+and find embodiment in brain-inspired robots and drones.
+The model itself might be extended to account for nonvisual response
+properties of \ac{MSTd} neurons, which include the involvement of
+vestibular and eye movement-related signals.
+
+Overall, the contributions of this thesis span multiple disciplines including
+computational neuroscience, computer science/engineering, and robotics.
+The present work might be of interest to the neuroscience community, as it
+1) provides a mechanistic description of visual motion processing in the brain
+and 2) makes specific predictions that can be empirically verified.
+The present work might also be of interest to the computer science and
+engineering communities, as it 
+1) sheds light on the computational principles that might be at play 
+in the visual brain, 
+2) makes significant contributions to the open-source movement, and
+3) describes algorithms that are compatible with recent neuromorphic hardware.
+Finally, the present work might be of interest to the robotics community, as it
+1) investigates the functional link between models of brain function and an
+agent's real-world behavior,
+and 2) constitutes a first step into building fully functional and autonomous
+neurorobotics platforms.
+
+It is my hope that these studies will not only further our understanding 
+of how the brain works, but also lead to novel algorithms and 
+brain-inspired robots capable of outperforming current artificial systems.
+
+

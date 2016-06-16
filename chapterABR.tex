@@ -1,0 +1,1250 @@
+\chapter{GPU-Accelerated Cortical Neural Network Model for 
+Visually Guided Robot Navigation}
+\label{ch:ABR}
+
+\section{Introduction}
+Despite a wealth of data regarding the neural
+circuitry concerned with the perception of self-motion variables
+such as the current direction of travel
+(``heading'')~\citep{BrittenNewsome1998,DuffyWurtz1997,Gu2006}
+or the perceived position and speed of
+objects~\citep{EifukuWurtz1998,Tanaka1993},
+little research has been devoted to investigating how this neural
+circuitry may relate to the behavioral dynamics of steering around
+obstacles and towards goals \citep{FajenWarren2003,WilkieWann2003}.
+
+In the last two chapters, I focused on an efficient implementation
+of a large-scale \ac{SNN} model that could build a cortical representation
+of visual motion in the spiking domain.
+In this chapter, I aim to investigate whether the model can be used to
+generate appropriate steering commands in a visually guided navigation task
+when embodied on a physical robot exploring a real-world environment
+(see Fig.~\ref{fig:ABR|LeCarl}).
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.7\textwidth]{abr_lecarl}
+  \caption{
+  ``Le Carl'' Android based robot, which was constructed from the
+  chassis of an R/C car. The task of the robot was to navigate to
+  a visually salient target (bright yellow foam ball) while
+  avoiding an obstacle (blue recycle bin) along the way.
+  The robot's position throughout the task was monitored by an
+  overhead camera that tracked the position of the green marker.}
+  \label{fig:ABR|LeCarl}
+\end{figure}
+
+Visually guided navigation has traditionally attracted much
+attention from the domains of both vision and control, producing
+countless computational models with excellent navigation and
+localization performance (for a recent survey see 
+\cite{Bonin-Font2008}).
+However, the majority of these models have taken
+a computer science or engineering approach, without regard to
+biological or psychophysical fidelity. To date, only a handful of
+neural network models have been able to explain the trajectories
+taken by humans to steer around stationary objects toward a
+goal~\citep{Browning2009a,Elder2009},
+and none of them have been tested in real-world
+environments. The real world is the ultimate test bench for
+a model that is trying to link perception to action, because even
+carefully devised simulated experiments typically fail to transfer
+to real-world settings. Real environments are rich, multimodal,
+and noisy; an artificial design of such an environment would be
+computationally intensive and difficult to
+simulate~\citep{KrichmarEdelman2006}.
+Yet real-world integration is often prohibited due
+to engineering requirements, programming intricacies, and the
+sheer computational cost that come with large-scale biological
+models. Instead, such models often find application only in
+constrained or virtual environments, which may severely limit
+their explanatory power when it comes to generalizing findings to
+real-world conditions.
+
+In contrast, developing a robotic platform whose behavior is guided by
+a biologically detailed network of spiking neurons might allow us to
+evaluate both theories and simulations in real-world environments.
+Since \ac{SNN} models are also compatible with recent neuromorphic
+architectures
+\citep{Boahen2006,Cassidy2014,Khan2008,Schemmel2010,Srinivasa2012}
+and neuromorphic sensors \citep{Lichtsteiner2008,Liu2010,WenBoahen2009},
+developing neurorobotic agents that display cognitive functions or
+learn behavioral abilities through autonomous interaction may
+also represent an important step toward realizing functional 
+\ac{SNN} networks on neuromorphic hardware.
+
+
+
+\section{Methods}
+
+\subsection{The Robotic Platform}
+\label{sec:ABR|robot}
+In order to engineer a system capable of real-time execution and
+real-world integration of large-scale biological models, we needed
+to address several technical challenges as outlined below.
+
+First, the \acf{ABR} framework 
+\citep{OrosKrichmar2012,OrosKrichmar2013a,OrosKrichmar2013b}
+was used as a flexible and inexpensive open-source robotics platform. 
+In specific, we made use of the ``Le Carl'' robot, an \ac{ABR}
+platform constructed from the chassis of an R/C car 
+(see Fig.~\ref{fig:ABR|setup}). 
+The main controller of the platform was an
+Android mobile phone (Samsung Galaxy S3), which mediated communication
+via Bluetooth to an IOIO electronic board (SparkFun
+Electronics\footnote{The IOIO board can be obtained from \url{http://www.sparkfun.com.}}), which in turn sent \ac{PWM}
+commands to the actuators and speed controllers of the R/C car.
+Since today's smartphones are equipped with a number of sensors
+and processors, it is possible to execute computationally demanding
+software based on real-time sensory data directly on the
+phone. The first neurorobotics study to utilize the ABR platform implemented
+a neural network based on neuromodulated attentional
+pathways to perform a reversal learning task by fusing a number
+of sensory inputs such as GPS location, a compass reading, and the
+values of on-board IR sensors~\citep{OrosKrichmar2012}. However,
+the complexity and sheer size of the present model did not allow
+for on-board processing, and instead required hosting the computationally
+expensive components on a remote machine.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.9\textwidth]{abr_setup}
+  \caption{
+  Technical setup. An Android app (ABR client) was used to record
+  $320\times240$ images at $20$ fps and send them to a remote
+  machine (ABR server) hosting a cortical model made of two
+  processing streams: an obstacle component responsible for
+  inferring the relative position and size of nearby obstacles
+  by means of motion discontinuities, and a goal component
+  responsible for inferring the relative position and size of a
+  goal object by means of color blob detection.
+  These streams were then fused in a model of the \acf{PPC} to
+  generate steering commands that were sent back to the \ac{ABR}
+  platform.}
+  \label{fig:ABR|setup}
+\end{figure}
+
+Second, an Android app (labeled ``ABR client'' in 
+Fig.~\ref{fig:ABR|setup}) was developed
+to allow the collection of sensory data and communication
+with a remote machine (labeled ``ABR server'' in 
+Fig.~\ref{fig:ABR|setup}) via WiFi and 
+3G\footnote{All ABR source code is available from \url{https://www.github.com/UCI-ABR.}}.
+The only sensor used in the present study was the Android
+phone's camera, which collected $320\times240$ pixel images while the
+robot was behaving. These images were then sent via \ac{UDP} to the
+\ac{ABR} server, 
+at a rate of roughly $20$ frames per second. The neural
+network processed the stream of incoming images in real-time
+and generated motor commands, which were received by the \ac{ABR}
+client app running on the phone via \ac{TCP}. The \ac{ABR} client communicated
+motor commands directly to the corresponding actuators
+and speed controllers of the R/C car via the IOIO board.
+Third, we developed a Qt software interface that allowed integration
+of the \ac{ABR} server with different C/C++ libraries such
+as \ac{CUDA}, OpenCV, and the \ac{SNN} simulator
+CARLsim~\citep{Beyeler2015a,Nageswaran2009,Richert2011}.
+In order to adhere to the real-time constraints of the system, 
+all computationally intensive
+parts of the model were accelerated on a \ac{GPU} (i.e., a single
+NVIDIA GTX 780 with \SI{3}{\giga\byte} of memory) 
+using the \ac{CUDA} programming framework.
+
+
+\subsection{The Cortical Neural Network Model}
+\label{sec:ABR|model}
+
+The high-level architecture of the cortical neural network
+model is shown in Fig.~\ref{fig:ABR|setup}. 
+The model was based on the cortical model of visual motion
+processing presented in 
+Chapters~\ref{ch:ME} and \ref{ch:MT}. 
+The model
+used an efficient \ac{GPU} implementation of the 
+motion energy model~\citep{SimoncelliHeeger1998}
+to generate cortical representations
+of motion in a model of the \acf{V1}. Spiking
+neurons in a model of the \acf{MT} then
+located nearby obstacles by means of motion discontinuities
+(labeled ``Obstacle component'' in Fig.~\ref{fig:ABR|setup}). 
+The \ac{MT} motion signals
+projected to a simulated \acf{PPC}, where they
+interacted with the representation of a goal location
+(labeled ``Goal component'' in Fig.~\ref{fig:ABR|setup})
+to produce motor commands to steer the
+robot around obstacles toward a goal. The following subsections
+will explain the model in detail.
+
+
+\subsubsection{Visual Input}
+\label{sec:ABR|model|input}
+Inputs to the model were provided by the built-in camera
+of an Android phone (Samsung Galaxy S3) mounted on the
+\ac{ABR} platform. The phone took $320\times240$ pixel snapshots of
+the environment at a rate of roughly $20$ frames per second.
+These frames entered the model in two ways: First, mimicking
+properties of visual processing in the magnocellular pathway, a
+grayscale, down-scaled version of the lower half of the frame
+($80\times30$ pixels) was sent to the network processing visual motion
+(obstacle component). This pathway consisted of a preprocessing
+stage as well as a model of \ac{V1}, \ac{MT}, and the \ac{PPC}.
+Second, mimicking
+properties of visual processing in the parvocellular pathway, the
+originally collected RGB frame ($320\times240$ pixels) was sent to a
+model component concerned with locating a visually salient target
+in the scene (goal component). Because a neural implementation
+of this pathway was considered out of scope for the present study,
+the goal object was located using OpenCV-based segmentation in the
+\ac{HSV} color space. The location of the goal in the visual field was then
+communicated to the \ac{PPC}.
+
+
+\subsubsection{Preprocessing}
+\label{sec:ABR|model|preprocessing}
+The first stage of the obstacle component pathway (labeled
+``pre'' in Fig.~\ref{fig:ABR|setup})
+enhanced contrast and normalized the input
+image using OpenCV's standard implementation of \ac{CLAHE}. 
+The processed frame was then sent to the \ac{V1} stage.
+
+
+\subsubsection{Primary Visual Cortex (V1)}
+\label{sec:ABR|model|V1}
+The second stage of the obstacle component pathway (labeled
+``V1'' in Fig.~\ref{fig:ABR|setup}) used the motion energy model
+to implement model
+neurons that responded to a preferred direction and speed of
+motion~\citep{SimoncelliHeeger1998}.
+
+This stage of the model is described in detail in 
+Chapter~\ref{ch:ME}.
+In short, the motion energy model used a bank of 
+linear space-time oriented filters to model the 
+receptive field of directionally selective simple cells in \ac{V1}.
+The filter responses were half-rectified, squared, and normalized
+within a large spatial Gaussian envelope. The output of this stage
+was equivalent to rate-based activity of \ac{V1} complex cells, whose
+responses were computed as local weighted averages of simple cell
+responses in a Gaussian neighborhood of 
+$\sigma_{\textrm{V1c}} = 1.6$~pixels (see Fig.~\ref{fig:ABR|setup}).
+The resulting size of the receptive fields was roughly one
+degree of the visual field (considering that the horizontal field of
+view of a Samsung Galaxy S3 is roughly \SI{60}{\degree}), 
+which is in agreement
+with electrophysiological evidence from recordings in macaque
+\ac{V1}~\citep{FreemanSimoncelli2011}. 
+\ac{V1} complex cells responded
+to eight different directions of motion (in 
+\SI{45}{\degree} increments) at
+a speed of $1.5$ pixels per frame. 
+We interpreted these activity
+values as neuronal mean firing rates, which were scaled to match
+the contrast sensitivity function of \ac{V1} complex cells
+(see Section~\ref{sec:ME|V1|filter2mfr}).
+Based on these mean firing rates we then generated
+Poisson spike trains (of \SI{50}{\milli\second} duration), 
+which served as the
+spiking input to Izhikevich neurons representing cells in 
+area \ac{MT}.
+
+
+\subsubsection{Middle temporal (MT) area}
+\label{sec:ABR|model|MT}
+The simulated area \ac{MT} (labeled ``MT'' in 
+Fig.~\ref{fig:ABR|setup}) consisted
+of $40,000$ Izhikevich spiking neurons and roughly $1,700,000$
+conductance-based synapses, which aimed to extract the position
+and perceived size of any nearby obstacles by means of detecting
+motion discontinuities.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.9\textwidth]{abr_rf}
+  \caption{
+  Schematic of the spatial receptive fields in the network.
+  \ac{V1} neurons pooled retinal afferents and computed
+  directional responses according to the motion energy
+  model~\citep{SimoncelliHeeger1998}.
+  The receptive fields of \ac{MT} neurons had a circular center
+  preferring motion in a particular direction, surrounded by
+  a region preferring motion in the anti-preferred direction,
+  implemented as a difference of Gaussians.
+  \ac{PPC} neurons computed a net vector response weighted by the
+  firing rates of \ac{MT} neurons.}
+  \label{fig:ABR|RF}
+\end{figure}
+
+This stage of the model is based on the \ac{SNN} model of \ac{MT}
+described in detail in Chapter~\ref{ch:MT}.
+Neurons in model \ac{MT} received optic flow-like input
+from \ac{V1} cells, thus inheriting their speed and 
+direction preferences~\citep{BornBradley2005}.
+Their spatial receptive fields had
+a circular center preferring motion in a particular direction, surrounded
+by a region preferring motion in the anti-preferred
+direction~\citep{Allman1985,Born2000}.
+These receptive fields were implemented as a difference of 
+Gaussians: Excitatory
+neurons in \ac{MT} received input from Poisson spike generators
+in \ac{V1} in a narrow spatial neighborhood 
+($\sigma_{\textrm{MTe}} = 6.0$~pixels)
+and from inhibitory neurons in MT in a significantly larger spatial
+neighborhood 
+($\sigma_{\textrm{MTi}} = 12.0$~pixels; see Fig.~\ref{fig:ABR|RF}),
+which are comparable
+in size to receptive fields of neurons in layers $4$ and $6$ of
+macaque 
+\ac{MT}~\citep{Raiguel1995}. The
+weights and connection probabilities scaled with distance according
+to the Gaussian distribution. The maximum excitatory weight
+(at the center of a Gaussian kernel) was $0.01$ and the maximum
+inhibitory weight was $0.0015$. As a result of their intricate
+spatial receptive fields, excitatory neurons in MT were maximally
+activated by motion discontinuities in the optic flow field,
+which is thought to be of use for detecting object 
+motion \citep{Allman1985,Bradley1998}.
+Note that cortical cells
+with such a receptive field organization usually exhibit different
+binocular disparity preferences in their center and surround 
+regions \citep{Bradley1998}.
+However, because the model had
+access to only a single camera, we were unable to exploit disparity
+information (for more information please refer to 
+Section~\ref{sec:ABR|discussion|limitations}).
+
+All neurons in MT were modeled as Izhikevich spiking
+neurons~\citep{Izhikevich2003} 
+(Eqs.~\ref{eqn:BKG|Izh|IzhVoltage}--\ref{eqn:BKG|Izh|IzhReset};
+see Section~\ref{sec:BKG|Izh}).
+All excitatory neurons were modeled as \acf{RS} neurons
+(class $1$ excitable, $a = 0.02$, $b = 0.2$, $c = −65$,
+$d = 8$), and all inhibitory neurons were modeled as \acf{FS} neurons
+(class $2$ excitable, $a = 0.1$, $b = 0.2$, $c = −65$, $d = 2$)
+\citep{Izhikevich2003}.
+
+Ionic currents were modeled as dynamic synaptic channels with
+zero rise time and exponential decay
+(Eqs.~\ref{eqn:BKG|Izh|current}, \ref{eqn:BKG|Izh|receptors};
+see Section~\ref{sec:BKG|plasticity}).
+Synaptic weights were set to $0.01$ at the center of an excitatory
+Gaussian kernel,
+and $0.0015$ at the center of an inhibitory Gaussian kernel.
+Time constants were set to standard values for the different channels;
+that is, 
+AMPA (fast decay, $\tau_{\textrm{AMPA}} = \SI{5}{\milli\second}$), 
+NMDA (slow decay and voltage-dependent, 
+$\tau_{\textrm{NMDA}} = \SI{150}{\milli\second}$), 
+GABAa (fast decay, 
+$\tau_{\textrm{GABAa}} = \SI{6}{\milli\second}$),
+and GABAb (slow decay, 
+$\tau_{\textrm{GABAb}} = \SI{150}{\milli\second}$). A
+spike arriving at a synapse that was postsynaptically connected
+to an excitatory (inhibitory) neuron increased both 
+$g_{\textrm{AMPA}}$ and $g_{\textrm{NMDA}}$ 
+($g_{\textrm{GABAa}}$ and $g_{\textrm{GABAb}}$)
+with receptor-specific efficacy 
+$\eta_{\textrm{AMPA}} = 1.5$ and 
+$\eta_{\textrm{NMDA}} = 0.5$
+($\eta_{\textrm{GABAa}} = 1.0$ and 
+$\eta_{\textrm{GABAb}} = 1.0$). 
+Having $\eta_{\textrm{AMPA}} > \eta_{\textrm{NMDA}}$
+agrees with experimental findings \citep{Myme2003}
+and allowed the network to quickly react to changing sensory input.
+
+For more information on the exact implementation of the Izhikevich
+model, please refer to Chapter~\ref{ch:background} and to the
+CARLsim 2.0 release paper~\citep{Richert2011}.
+
+
+\subsubsection{Posterior Parietal Cortex (PPC)}
+\label{sec:ABR|model|PPC}
+The simulated \ac{PPC} (labeled ``PPCl'' and ``PPCr'' in 
+Fig.~\ref{fig:ABR|setup})
+combined visual representations of goal and obstacle information
+to produce a steering signal. The resulting dynamics of the steering
+signal resembled the Balance Strategy, which is a simple control
+law that aims to steer away from large sources of optic flow in the
+visual scene. For example, honeybees use this control law to steer
+collision-free paths through even narrow gaps by balancing the
+apparent speeds of motion of the images in their 
+eyes~\citep{Srinivasan1997}. 
+Interestingly, there is also some evidence for the
+Balance Strategy in 
+humans~\citep{Kountouriotis2013}. However,
+the present model differs in an important way from the traditional
+Balance Strategy, in that it tries to balance the flow generated
+from motion discontinuities in the visual field, which are thought
+to correspond to obstacles in the scene, instead of balancing a
+conventional optic flow field. For more information see 
+Section~\ref{sec:ABR|discussion|evidence}.
+
+The steering signal took the form of a turning rate, $\dot{\theta}$:
+
+\begin{equation}
+\dot{\theta} = \hat{\theta} - \theta,
+\label{eqn:ABR|model|PPC|turning}
+\end{equation}
+
+which was derived from the difference between the robot's
+current angular orientation, $\theta$, 
+and an optimal angular orientation
+estimated by the cortical network, $\hat{\theta}$. 
+The variable $\theta$ was based on
+a copy of the current PWM signal sent to the servos of the robot
+(efference copy), whereas the variable $\hat{\theta}$
+was derived from the neural activation in \ac{PPC}, 
+as described in Eq.~\ref{eqn:ABR|model|PPC|balance}.
+The resulting turning rate, $\dot{\theta}$,
+was then directly mapped into a PWM signal sent to the
+servos that controlled the steering of the robot. In order not to
+damage the servos, we made sure that the computed instantaneous
+change in turning rate, $\ddot{\theta}$, 
+never exceeded a threshold (set at
+roughly \SI{10}{\percent} of the full range of PWM values). 
+Steering with the
+second derivative also contributed to the paths of the robot being
+smoother.
+
+The cortical estimate of angular orientation was realized by
+separately summing optic flow information from the left 
+($F_{\textrm{L}}$) and
+right halves ($F_{\textrm{R}}$)
+of the visual scene according to the Balance
+Strategy, and combining these flow magnitudes with information
+about the target location ($T_{\textrm{L}}$ and $T_{\textrm{R}}$) 
+weighed with a scaling factor $\alpha$ (set at $0.6$):
+
+\begin{equation}
+\hat{\theta} \propto
+\frac{
+	F_\textrm{L} - F_\textrm{R} + \alpha (T_\textrm{R} - T_\textrm{L})
+}{
+	F_\textrm{L} + F_\textrm{R} + \alpha (T_\textrm{R} + T_\textrm{L})
+}.
+\label{eqn:ABR|model|PPC|balance}
+\end{equation}
+
+Here, the total optic flow in the left $(F_\textrm{L})$
+and right $(F_\textrm{R})$ halves was computed as follows:
+
+\begin{align}
+F_\textrm{L} & = \sum_\theta \sum_{y=0}^{R-1} \sum_{x=0}^{C/2-1}
+	|| r_\theta(x,y) e_\theta ||, \label{eqn:ABR|model|PPC|FL} \\
+F_\textrm{R} & = \sum_\theta \sum_{y=0}^{R-1} \sum_{x=C/2}^{C-1}
+	|| r_\theta(x,y) e_\theta ||, \label{eqn:ABR|model|PPC|FR}
+\end{align}
+
+where $R$ is the number of rows in the image, $C$ is the number
+of columns in the image, and $||.||$ denotes the Euclidean $2$-norm.
+Depending on the experiment, $r_\theta(x,y)$ is the firing rate of either
+an \ac{MT} or a \ac{V1} neuron that is selective to direction of motion 
+$\theta$ at spatial location $(x,y)$, and 
+$e_\theta$ is a unit vector pointing in the direction of $\theta$.
+
+The target location was represented as a two-dimensional blob
+of activity centered on the target's center of mass 
+$(x_\textrm{G}, y_\textrm{G})$. If the
+target was located in the left half of the image, it contributed to a
+term $T_\textrm{L}$:
+
+\begin{equation}
+T_\textrm{L} = \alpha A_\textrm{G} \sum_{y=0}^{R-1} \sum_{x=0}^{C/2-1} 
+	\exp \bigg( 
+    -\frac{
+    	(x-x_\textrm{G})^2 + (y-y_\textrm{G})^2
+    }{
+    	2\sigma^2_\textrm{G}
+    } \bigg),
+\label{eqn:ABR|model|PPC|TL}
+\end{equation}
+
+and if it was located in the right half of the image, it contributed
+to a term $T_\textrm{R}$:
+
+\begin{equation}
+T_\textrm{R} = \alpha A_\textrm{G} \sum_{y=0}^{R-1} \sum_{x=C/2}^{C-1} 
+	\exp \bigg( 
+    -\frac{
+    	(x-x_\textrm{G})^2 + (y-y_\textrm{G})^2
+    }{
+    	2\sigma^2_\textrm{G}
+    } \bigg),
+\label{eqn:ABR|model|PPC|TR}
+\end{equation}
+
+where $\alpha=0.6$, $\sigma_\textrm{G}=0.2C$, and $A_\textrm{G}$
+was the perceived area of the target, 
+which was determined with OpenCV using color
+blob detection. This allowed the target contribution to increase
+with target size, which we assumed to scale inversely with target
+distance (also compare 
+Section~\ref{sec:ABR|discussion|limitations}).
+Note that if
+the target was perfectly centered in the visual field, it contributed
+equally to $T_\textrm{L}$ and $T_\textrm{R}$. 
+Also, note that the contribution of the
+target component from the right half of the image, $T_\textrm{R}$, 
+to $\theta$ was positive, 
+whereas the contribution of the obstacle component $F_\textrm{R}$
+was negative. This led to the target component exhibiting an
+attractor-like quality in the steering dynamics, whereas the goal
+component exhibited a repeller-like quality.
+
+
+\section{Results}
+
+\subsection{Experimental Setup}
+In order to investigate whether the motion estimates in the simulated
+\ac{MT} were sufficient for human-like steering performance,
+the model was tested on a reactive navigation task in the hallway
+of the University of California, Irvine Social and Behavioral Sciences
+Gateway, where our laboratory is located 
+(see Fig.~\ref{fig:ABR|LeCarl}). This
+setup provided a relatively narrow yet highly structured environment
+with multiple sources of artificial lighting, thus challenging
+the cortical model to deal with real-world obstacles as well as to
+quickly react to changing illumination conditions.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.9\textwidth]{abr_cameras}
+  \caption{
+  Camera setup.
+  \textbf{A}, The robot's initial view of the scene from the onboard
+	Android phone.
+  \textbf{B}, View of an overhead camera that tracked the green marker
+	attached to the robot. 
+  \textbf{C}, Birds-eye view image of the scene, obtained via
+	perspective transformation from the image shown in (B).
+	The robot's location in each frame was inferred from the location 
+    of the marker, which in turn was determined using color blob detection.}   \label{fig:ABR|cameras}
+\end{figure}
+
+Analogous to the behavioral paradigm of \cite{FajenWarren2003},
+the robot's goal was to steer around an obstacle placed in
+its way (i.e., a recycle bin) in order to reach a distant goal (i.e., a
+yellow foam ball). The obstacle was placed between the location of
+the target and the robot's initial position, at three different angles
+(off-set by one, four, and eight degrees to the left of the robot's
+initial view) and different distances ($2.5$, $3$, and \SI{3.5}{\meter}
+from the
+robot's initial position). For each of these configurations we ran
+a total of five trials, during which we collected both behavioral
+and simulated neural data. An example setup is shown in 
+Fig.~\ref{fig:ABR|cameras}A.
+At the beginning of each trial, the robot was placed in the same
+initial position, directly facing the target. The robot would then
+quickly accelerate to a maximum speed of roughly \SI{1}{\meter\per\second}. 
+Speed was then held constant until the robot had navigated to the vicinity
+of the goal (roughly \SI{0.5}{\meter} apart), 
+at which point the trial was ended through manual intervention.
+
+An over-head camera was used to monitor the robot's path
+throughout each trial (see Fig.~\ref{fig:ABR|cameras}B). 
+The camera was mounted
+on the wall such that it overlooked the hallway, and was used to
+track the position of a large green marker attached to the rear of
+the robot (best seen in Fig.~\ref{fig:ABR|LeCarl}). 
+Using a perspective transformation,
+a $320\times240$ pixel image (taken every \SI{100}{\milli\second})
+was converted into a birds-eye view of the scene 
+(see Fig.~\ref{fig:ABR|cameras}C).
+We used the 
+standard OpenCV implementation of this transformation and fine-tuned
+the parameters for the specific internal parameters of the
+camera. Although three-dimensional objects will appear distorted
+(as is evident in Fig.~\ref{fig:ABR|cameras}C), 
+flat objects lying on the ground plane
+(i.e., the hallway floor) will be drawn to scale. This allowed us
+to detect and track the green marker on the robot directly in the
+transformed image (Fig.~\ref{fig:ABR|cameras}C),
+in which the size of the marker does
+not depend on viewing distance 
+(as opposed to Fig.~\ref{fig:ABR|cameras}B). Color blob
+detection was applied to find the marker in each frame, and the
+marker's location was used to infer the robot's location. In order to
+aid tracking of the marker, we added temporal constraints between
+pairs of subsequent frames for outlier rejection. This procedure
+not only allowed us to automatically record the robot's location at
+any given time, but also allowed direct comparison of the robot's
+behavioral results with human psychophysics data.
+
+
+\subsection{Behavioral Results}
+\cite{FajenWarren2003} studied how humans walk around
+obstacles toward a stationary goal, and developed a model to
+explain the steering trajectories of the study's participants. Their
+work revealed that accurate steering trajectories can be obtained
+directly from the scene geometry, namely the distance and angles
+to the goal and obstacles. Using their behavioral model, we
+calculated ``ground truth'' paths for the scene geometry of our
+experimental setup, and compared them to steering trajectories
+generated by the robot's cortical neural network model. In order to
+assess the contribution of motion processing in \ac{MT} we conducted
+two sets of experiments: one where steering commands were
+based solely on \ac{V1} activity, and one where steering commands
+were based on \ac{MT} activity, by adjusting 
+$r_\theta(x,y)$ in Eq.~\ref{eqn:ABR|model|PPC|FL} and 
+Eq.~\ref{eqn:ABR|model|PPC|FR}.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.9\textwidth]{abr_behavior}
+  \caption{
+  Behavior paths of the robot (colored solid lines) around a single 
+  obstacle (recycle bin, `O') toward a visually salient goal 
+  (yellow foam ball, `X') for five different scene geometries, 
+  compared to ``ground truth'' (black dashed lines) obtained from the
+  behavioral model by \cite{FajenWarren2003}. 
+  Results are shown for steering with \ac{V1} (blue) as well as for
+  steering with \ac{MT} (red). Solid lines are the robot's mean path
+  averaged over five trials, and the shaded regions correspond to the
+  standard deviation.}
+  \label{fig:ABR|behavior}
+\end{figure}
+
+Fig.~\ref{fig:ABR|behavior} illustrates the robot's path around a 
+single obstacle (recycle bin, `O') toward a visually salient goal 
+(yellow foam ball, `X') for five different scene geometries, 
+analogous to Fig. $10$ in \cite{FajenWarren2003}.
+Results are shown for steering with \ac{V1} (blue) as well as for 
+steering with \ac{MT} (red). In the first three
+setups, the obstacle was placed \SI{3}{\meter} away 
+from the robot's initial location, off-set by eight (red), four (green), 
+and one (blue) degrees
+to the left of the robot's initial view. Two other setups were tested,
+in which the obstacle distance was \SI{3.5}{\meter} (yellow)
+and \SI{2.5}{\meter} (magenta) at an angle of \SI{4}{\degree}. 
+The robot's mean path from five
+experimental runs is shown as a thick solid line in each panel, and
+the shaded region corresponds to the standard deviation. The black
+dashed lines correspond to the ``ground truth'' paths calculated
+from the behavioral model by \cite{FajenWarren2003} using the
+corresponding scene geometry and standard parameter values.
+Each of these five obstacle courses was run five times for a total
+of $25$ successful trials.
+
+Steering paths were generally more accurate and more robust
+when steering with \ac{MT} as opposed to steering with \ac{V1}. Paths
+generated from neural activity in \ac{MT} not only closely matched
+human behavioral data, but they also were surprisingly robust.
+That is, the robot successfully completed all $25$ trials without
+hitting an obstacle, the walls of the hallway, or missing the goal.
+In fact, the only setup that proved difficult for the robot had the
+obstacle placed only \SI{2.5}{\meter} away from the robot 
+(rightmost panel in Fig.~\ref{fig:ABR|behavior}). 
+In this scenario, ``ground truth'' data indicates that humans
+start veering to the right within the first second of a trial, which
+seemed not enough time for the robot. In contrast, steering from
+neural activity in \ac{V1} led to a total of $7$ crashes, which involved the
+robot driving either into the obstacle or the wall, upon which the
+trial was aborted and all collected data discarded. We repeated the
+experiment until the robot successfully completed five trials per
+condition. When steering from \ac{V1} neural activity, the robot tended
+to react more strongly to behaviorally irrelevant stimuli, leading to
+more variability in the robot's trajectories.
+
+\afterpage{
+\begin{sidewaystable}[h]
+ \centering
+\captionof{table}{Summary of mean path errors when steering with signals in \ac{V1} vs. \ac{MT} (5 trials each).}
+  \def\arraystretch{1.5}
+ \begin{tabular}{llllll}
+ \hline
+ Obstacle distance (m) & Obstacle angle (deg) &
+ \multicolumn{2}{l}{Area error (\SI{}{\meter\square})} &
+ \multicolumn{2}{l}{Maximum deviation (m)} \\
+ & & V1 & MT & V1 & MT \\
+  \hline
+ $3$	& \SI{-1}{\degree}	& $0.472 \pm 0.174$	& $0.193 \pm 0.080$	& $0.237 \pm 0.077$	& $0.112 \pm 0.045$ \\
+ $3$	& \SI{-4}{\degree}	& $0.407\pm0.097$	& $0.140\pm0.024$	& $0.193\pm0.052$	& $0.091\pm0.013$ \\
+ $3$	& \SI{-8}{\degree}	& $0.354\pm0.050$	& $0.170\pm0.055$	& $0.165\pm0.020$	& $0.102\pm0.026$ \\
+ $3.5$	& \SI{-4}{\degree}	& $0.332\pm0.110$	& $0.264\pm0.100$	& $0.169\pm0.039$	& $0.143\pm0.029$ \\
+ $2.5$	& \SI{-4}{\degree}	& $0.575\pm0.176$	& $0.319\pm0.093$	& $0.288\pm0.099$	& $0.193\pm0.056$
+ \end{tabular}
+ \label{tbl:ABR|path}
+\end{sidewaystable}
+\clearpage
+}
+
+For all five tested conditions we calculated the path area error
+(using the trapezoidal rule for approximating the region under
+the graph) as well as the maximum distance the robot's path
+deviated from the ground truth at any given time. Mean and
+standard deviation of these data (averaged over five trials each)
+are summarized in Table~\ref{tbl:ABR|path}. 
+All path errors were on the order of
+\SI{0.1}{\meter\square}, 
+with errors generated from steering with \ac{MT} consistently
+smaller than errors generated from steering with \ac{V1}. When the
+robot was steering from signals in \ac{MT}, trial-by-trial variations were
+on the order of \SI{0.01}{\meter\square}, 
+suggesting that under these circumstances
+the robot reliably exhibited human-like steering behavior in all
+tested conditions. The maximum distance that the robot's path
+deviated from the human-like path was 
+on the order of \SI{10}{\centi\meter},
+which is much smaller than the obstacle width (\SI{37}{\centi\meter}). 
+In contrast, steering with \ac{V1} often led to much larger deviations 
+in some cases.
+The best single-trial result was \SI{0.084}{\meter\square} area error
+and \SI{5}{\centi\meter} maximum deviation on the 
+\SI{-1}{\degree} condition. These results suggest
+that in most trials the task could still be performed even when
+steering with \ac{V1}, but that motion processing in \ac{MT} was critical
+for reliability and accuracy, both of which are distinct qualities of
+human-like steering.
+
+Furthermore, these results are comparable to simulated data
+obtained with the STARS model, where the authors reported
+path area errors and maximum deviations on the same order of
+magnitude (see Table $2$ in \cite{Elder2009}). Their best result
+was \SI{0.097}{\meter\square} area error and \SI{2.52}{\centi\meter}
+maximum deviation on a single trial of the \SI{-2}{\degree} condition.
+However, the STARS model did
+not directly process visual input, nor was it tested in a real-world
+environment. The follow-up study to the STARS model (called
+ViSTARS) did not provide quantitative data on path errors in the
+same manner that would allow comparison here. Thus similar
+performance to the STARS model is assumed.
+
+A movie showcasing the behavioral trajectories of the robot
+is available on our website: \url{www.socsci.uci.edu/∼jkrichma/ABR/
+lecarl_obstacle_avoidance.mp4}.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.9\textwidth]{abr_raster}
+  \caption{
+  Raster plot of neuronal activity for \ac{V1} and \ac{MT} 
+  recorded in a single trial where the obstacle 
+  was \SI{3}{\meter} away and offset by \SI{8}{\degree} 
+  (red colored line in Fig.~\ref{fig:ABR|behavior}).
+  A dot represents an action potential from a simulated neuron. 
+  For the sake of visualization, only every eighth neuron in the
+  population is shown over the time course of six seconds that 
+  included both the obstacle avoidance and the goal approach. 
+  Neurons are organized according to their direction selectivity, 
+  where neurons with ID $0-299$ were most selective to rightward motion
+  (\SI{0}{\degree}), IDs $300-599$ mapped to upward-rightward motion 
+  at \SI{45}{\degree}, IDs $600-899$ mapped to upward motion at 
+  \SI{90}{\degree}, IDs $900-1199$ mapped to \SI{135}{\degree}, 
+  IDs $1200-1499$ mapped to \SI{180}{\degree}, IDs $1500-1799$ 
+  mapped to \SI{225}{\degree}, IDs $1800-2099$ mapped to 
+  \SI{270}{\degree}, and IDs $2100-2299$ mapped to \SI{315}{\degree}. 
+  $\mathbf{A}$, \ac{V1} spike trains generated from a Poisson distribution
+  with mean firing rate equal to the linear filter response. 
+  Average activity in the population was $18.6~\pm$~\SI{15.44}{\hertz}. 
+  $\mathbf{B}$, Spike trains of Izhikevich neurons in \ac{MT}. 
+  Average activity in the population was $5.74~\pm$~\SI{8.98}{\hertz}.}
+  \label{fig:ABR|raster}
+\end{figure}
+
+
+\subsection{Neural Activity}
+Fig.~\ref{fig:ABR|raster} shows the activity of neurons in \ac{V1}
+(Panel A) and \ac{MT} (Panel B) recorded in a single trial 
+of the third setup in Fig.~\ref{fig:ABR|behavior} (blue).
+For the sake of clarity, only every eighth neuron in the population is
+shown over a time course of six seconds, which included both the
+obstacle avoidance and the goal approach. Neurons are organized
+according to their direction selectivity, where neurons with ID
+$0-299$ were most selective to rightward motion (\SI{0}{\degree}), 
+IDs $300-599$ mapped to upward-rightward motion at \SI{45}{\degree}, 
+IDs $600-899$ mapped to upward motion at \SI{90}{\degree}, 
+IDs $900-1199$ mapped to \SI{135}{\degree}, IDs $1200-1499$
+mapped to \SI{180}{\degree}, IDs $1500-1799$ mapped to \SI{225}{\degree},
+IDs $1800-2099$ mapped to \SI{270}{\degree}, and IDs $2100-2299$
+mapped to \SI{315}{\degree}.
+Panel A shows the spike trains generated from the rate-based
+activity of \ac{V1} neurons using a Poisson spike generator. The firing
+of \ac{V1} neurons was broad and imprecise in response to stimuli. In
+contrast, spiking responses of neurons in \ac{MT} (Panel B) were more
+selective, and sharper than \ac{V1}.
+As the robot approached the obstacle roughly from $1000$ to
+\SI{2500}{\milli\second} of the trial shown in Fig.~\ref{fig:ABR|raster},
+neural activity in both \ac{V1} and \ac{MT} steadily increased in 
+both strength and spatial extent. As
+activity in \ac{MT} increased a repeller-like behavioral response was
+triggered, which in turn introduced even more apparent motion on
+the retina (roughly from $2200$ to \SI{3200}{\milli\second}). 
+As soon as the obstacle moved out of the robot's view due to 
+successful avoidance (around \SI{3200}{\milli\second}), 
+activity in \ac{MT} rapidly dropped off, causing the robot's
+turning rate to momentarily decrease. With the goal still in view
+and growing in size, turning rate was now increased with opposite
+sign (roughly from $3500$ to \SI{4500}{\milli\second}), 
+leading to an attractor-like behavioral response that led the robot 
+directly to the goal. As the
+robot navigated to the goal (within a \SI{0.5}{\meter} distance), 
+the trial was ended manually. 
+Note that near the end of the trial (roughly from
+$4000$ to \SI{5000}{\milli\second}), neurons in \ac{MT} rightly perceived
+the goal object also as an obstacle, which is something the 
+Fajen and Warren model does not take into account.
+But, because the goal component
+of the steering command grew more rapidly with size than the
+obstacle component, the robot continued to approach the goal,
+rather than starting to avoid it.
+
+\afterpage{%
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.85\textwidth]{abr_flow}
+  \caption{
+  Overall network activity and corresponding behavioral output during
+  obstacle avoidance in a single trial. Each Panel summarizes the
+  processing of a single visual input frame, which corresponded to a 
+  time interval of \SI{50}{\milli\second}. The indicated time intervals 
+  are aligned with the neuronal traces presented in
+  Fig.~\ref{fig:ABR|raster}. A frame received at time
+  $t-50$ ms led to a motor response at time $t$. Neural activity during
+  these \SI{50}{\milli\second} is illustrated as an optic flow field,
+  overlaid on visual input, for both Poisson spike generators in \ac{V1}
+  and Izhikevich spiking neurons in \ac{MT} (population vector). 
+  Vector length indicates ``confidence'' of the direction estimate. 
+  For the sake of clarity,
+  only every fourth pixel location is visualized. The resulting turning
+  rate, $\hat{\theta}$, which was mapped to a PWM signal for the robot's
+  servos, is illustrated using a sliding bar, where the position of the
+  triangle indicates the sign and magnitude of the turning rate. 
+  The small horizontal line indicates $\hat{\theta}=0$.}
+  \label{fig:ABR|flow1}
+\end{figure}
+\clearpage
+}
+
+\afterpage{%
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.85\textwidth]{abr_flow2}
+  \caption{
+  Overall network activity and corresponding behavioral output during
+  obstacle avoidance in a single trial. Each Panel summarizes the
+  processing of a single visual input frame, which corresponded to a 
+  time interval of \SI{50}{\milli\second}. The indicated time intervals 
+  are aligned with the neuronal traces presented in
+  Fig.~\ref{fig:ABR|raster}. A frame received at time
+  $t-50$~ms led to a motor response at time $t$. Neural activity during
+  these \SI{50}{\milli\second} is illustrated as an optic flow field,
+  overlaid on visual input, for both Poisson spike generators in \ac{V1}
+  and Izhikevich spiking neurons in \ac{MT} (population vector). 
+  Vector length indicates ``confidence'' of the direction estimate. 
+  For the sake of clarity,
+  only every fourth pixel location is visualized. The resulting turning
+  rate, $\hat{\theta}$, which was mapped to a PWM signal for the robot's
+  servos, is illustrated using a sliding bar, where the position of the
+  triangle indicates the sign and magnitude of the turning rate. 
+  The small horizontal line indicates $\hat{\theta}=0$.}
+  \label{fig:ABR|flow2}
+\end{figure}
+\clearpage
+}
+
+Overall network activity and corresponding behavioral output
+is illustrated in Figs.~\ref{fig:ABR|flow1} and \ref{fig:ABR|flow2}. 
+Each Panel summarizes the processing
+of a single visual input frame, which corresponded to a time
+interval of \SI{50}{\milli\second}. 
+The indicated time intervals are aligned with
+the neuronal traces presented in Fig.~\ref{fig:ABR|raster}. 
+A frame received at time $t-50$ ms led to a motor response at time $t$. 
+This sensorimotor
+delay was due to the fact that the \ac{SNN} component of the model
+needed to be executed for \SI{50}{\milli\second}. 
+Neural activity during these \SI{50}{\milli\second} is illustrated
+as an optic flow field, overlaid on visual input,
+for both Poisson spike generators in \ac{V1} and Izhikevich spiking
+neurons in \ac{MT}. Here, every arrow represents the population vector
+of the activity of eight neurons (selective to the eight directions of
+motion) coding for the same spatial location. Note that, because
+these neurons were maximally selective to a speed of $1.5$ pixels
+per frame, vector length does not indicate velocity as is the case in a
+conventional optic flow field, but rather confidence in the direction
+estimate. For the sake of clarity, only every fourth pixel location is
+visualized. The resulting turning rate, $\hat{\theta}$, 
+which was mapped to a PWM signal for the robot's servos, 
+is illustrated using a sliding bar,
+where the position of the triangle indicates the sign and magnitude
+of the turning rate. The small horizontal line indicates $\hat{\theta}=0$.
+Note that the turning rate depended both on an obstacle term
+(from optic flow) and a goal term (from color blob detection) (see
+Section~\ref{sec:ABR|model|PPC}).
+
+Obstacle avoidance is illustrated in Fig.~\ref{fig:ABR|flow1}. 
+At the beginning of
+the trial (Panel A), the image of the obstacle on the retina is too
+small to produce significant optic flow. Instead, \ac{V1} responds to
+arbitrary features of high contrast in the visual scene. Because
+these responses were relatively low in magnitude and roughly
+uniformly distributed across the scene, \ac{MT} neurons successfully
+suppressed them, effectively treating them as noise. As a result, the
+turning rate was near zero, informing the robot to steer straight
+ahead. In the following second (Panels B--D) the obstacle as well as
+patterned regions in its vicinity generated an increasingly uniform
+pattern of motion, leading to strong responses in MT and a strongly
+positive turning rate. In turn, the initiated robot motion introduced
+even more apparent motion on the retina, leading to a repeller-like
+behavioral response and successful obstacle avoidance. Note that
+it is sometimes possible for the motion signals to slightly extend
+from the object to neighboring contrast-rich regions, which is due
+to the strong motion pooling in \ac{MT}.
+
+Goal-directed steering is illustrated in Fig.~\ref{fig:ABR|flow2}. 
+As soon as the
+obstacle moved out of the robot's view due to successful avoidance
+(Panel A), activity in \ac{MT} rapidly dropped off, causing the robot's
+turning rate to momentarily decrease. With the goal still in view
+and growing in size (Panels B--D), turning rate was now increased
+with opposite sign, eventually overpowering the flow signals that
+would have instructed the robot to turn away from the goal (Panel
+D), and instead leading to an attractor-like behavioral response
+that drew the robot directly to the goal. As the robot navigated to
+the goal (within a \SI{0.5}{\meter} distance; following Panel D), 
+the trial was ended manually.
+
+Overall these results demonstrate how a spiking model of \ac{MT}
+can generate sufficient information for the detection of motion
+boundaries, which can be used to steer a robot around obstacles
+in a real-world environment.
+
+
+\subsection{Computational Performance}
+The complete cortical model ran in real-time on a single \ac{GPU}
+(NVIDIA GTX $780$ with $2304$ \ac{CUDA} cores and \SI{3}{\giga\byte}
+of GDDR5 memory). In fact, during an average trial, most of the 
+visual frames were processed faster than real-time. 
+In order for the network to satisfy the real-time constraint, 
+it must be able to process up to $20$ frames per second, 
+which was the upper bound of the ABR client's frame rate. 
+In practice, the effective frame rate might be reduced
+due to \ac{UDP} packet loss and network congestion (depending on the
+quality and workload of the WiFi connection). In other words, the
+cortical model must process a single frame in no more than 
+\SI{50}{\milli\second}.
+
+The majority of the computation time was spent on neural processing
+in \ac{V1} and \ac{MT}. Every \SI{50}{\milli\second}, model \ac{V1}
+computed a total of $201,600$ filter responses 
+($80\times30$ pixel image, $28$ spatiotemporal filters at three 
+different scales), taking up roughly \SI{15}{\milli\second} of
+execution time. Model \ac{MT} then calculated the temporal dynamics
+of $40,000$ Izhikevich spiking neurons and roughly $1,700,000$
+conductance-based synapses, which took roughly \SI{25}{\milli\second}
+of execution time. During this time, a different thread performed 
+color blob detection using OpenCV, which allowed the total 
+execution time to stay under \SI{50}{\milli\second}. 
+Compared to these calculations, the time it took to perform \ac{CLAHE}
+on the \ac{GPU} was negligible.
+
+
+
+\section{Discussion}
+I presented a neural network modeled after visual motion
+perception areas in the mammalian neocortex that is controlling
+a physical robot performing a visually-guided navigation task in
+the real world. The system described here builds upon previous
+work on visual motion perception in large-scale spiking neural
+networks~\citep{Beyeler2014}.
+The prior system was tested only on synthetic visual stimuli 
+to demonstrate neuronal tuning
+curves, whereas the present work demonstrates how perception
+may relate to action. As this is a first step toward an embodied
+neuromorphic system, we wanted to ensure that the model
+could handle real sensory input from the real world. Constructing
+an embodied model also ensured that the algorithm could handle
+noisy sensors, imprecise motor responses, as well as sensory
+and motor delays. The model generated a cortical representation
+of dense optic flow using thousands of interconnected spiking neurons,
+determined the position of objects based on motion discontinuities,
+and combined these signals with the representation of a
+goal location in order to calculate motor commands that successfully
+steered the robot around obstacles toward to the goal. Therefore,
+the present study demonstrates how cortical motion signals
+in a model of \ac{MT} might relate to active steering control, 
+and suggests that these signals might be sufficient to generate 
+human-like trajectories through a cluttered hallway. This emergent
+behavior might not only be difficult to achieve in simulation, but
+also strengthens the claim that \ac{MT} contributes to these smooth
+trajectories in natural settings.
+This finding exemplifies the importance of embodiment, as behavior 
+is deeply coupled not only with
+the underlying model of brain function, but also with the anatomical
+constraints of the physical body.
+
+The behavior of the robot was contingent on the quality of
+a cortical representation of motion generated in a model of
+visual area \ac{MT}. While it is generally assumed that vector-based
+representations of retinal flow in both \ac{V1} and \ac{MT} are highly
+accurate, modeling work has suggested that the generation of
+highly accurate flow representations in complex environments
+is challenging due to the aperture 
+problem~\citep{Baloch1997,Bayerl2004,Chey1997,SimoncelliHeeger1998}.
+As a result, there is a degree
+of uncertainty in all retinal flow estimations. Nevertheless, the
+present model is able to generate optic flow fields of sufficient
+quality to steer a physical robot on human-like trajectories
+through a cluttered hallway. Paramount to this competence are
+the receptive fields of neurons in model \ac{MT}, which are able to
+vastly reduce ambiguities in the \ac{V1} motion estimates 
+(see Figs.~\ref{fig:ABR|flow1} and \ref{fig:ABR|flow2})
+and enhance motion discontinuities through spatial pooling
+and directional opponent inhibition. As a result, the robot is
+able to correctly infer the relative angle and position of nearby
+obstacles, implicitly encoded by the spatial arrangement and
+overall magnitude of optic flow, and produce steering commands
+that lead to successful avoidance.
+
+It is interesting to consider whether there is a benefit in using
+spiking neurons instead of rate based neurons. Under the present
+experimental conditions, the steering network may have worked
+just as well with a model based on mean-firing rate neurons. However,
+there is evidence that humans adjust their steering in response
+not only to spatial but also to temporal asymmetries in
+the optic flow 
+field~\citep{Duchon2002,Kountouriotis2013}.
+Therefore, having at our disposal a tested, embodied model
+of brain function that respects the detailed temporal dynamics of
+neuronal and synaptic integration is likely to benefit follow-up
+studies that aim to quantitatively investigate how such spatiotemporal
+behavior can arise from neural circuitry. In addition, because
+the main functional components of this system were event-driven
+spiking neurons, the model has the potential to run on neuromorphic
+hardware, such as HRL~\citep{Srinivasa2012}, IBM~\citep{Cassidy2014},
+NeuroGrid~\citep{Boahen2006}, SpiNNaker~\citep{Khan2008}, and
+BrainScaleS~\citep{Schemmel2010}.
+Some of these platforms are now capable of emulating neural circuits
+that contain more than a million neurons, at rates that are
+significantly faster than real time. In addition, because spiking neurons
+communicate via the \ac{AER} protocol, the model could also be
+interfaced with an event-based, neuromorphic vision sensor as a
+sensory front-end~\citep{Lichtsteiner2008}. Thus, developing complex
+spiking networks that display cognitive functions or learn
+behavioral abilities through autonomous interaction may also
+represent an important initial step into realizing functional 
+large-scale networks on neuromorphic hardware.
+
+Additionally, we have developed software to further extend the
+functionality of the \ac{ABR} platform~\citep{OrosKrichmar2013b}.
+A set of tools and interfaces exists that provides a standard interface
+for non-experts to bring their models to the platform, ready for
+exploration of networked computation principles and applications.
+The fact that our platform is open source, extensible, and affordable
+makes \ac{ABR} highly attractive for embodiment of brain-inspired
+models. For more information and software downloads, see our
+website: \url{www.socsci.uci.edu/~jkrichma/ABR}.
+
+
+\subsection{Neurophysiological Evidence and Model Alternatives}
+\label{sec:ABR|discussion|evidence}
+Human behavioral data suggests that visually-guided navigation
+might be based on several possible perceptual variables, which
+can be flexibly selected and weighted depending on the environmental
+constraints~\citep{Kountouriotis2013,Morice2010}.
+In the case of steering to a stationary
+goal, evidence suggests that human subjects rely on both optic
+flow, such that one aligns the heading specified by optic flow
+with the visual target~\citep{Gibson1958,Warren2001},
+and egocentric direction, such that one aligns the
+locomotor axis with the egocentric direction of the 
+goal~\citep{Rushton1998}.
+Optic flow tends to dominate when
+there is sufficient visual surface structure in the 
+scene~\citep{Li2000,Warren2001,WilkieWann2003}, whereas egocentric
+direction dominates when visual structure is 
+reduced~\citep{Rushton1998,Rushton2002}. Interestingly, optic
+flow asymmetries are able to systematically bias the steering of
+human subjects, even in the presence of explicit path 
+information~\citep{Kountouriotis2013}.
+This finding may hint at the possibility
+of a cortical analog to the Balance
+Strategy~\citep{Duchon2002,Srinivasan1997}, 
+which suggests that humans adjust
+their steering in response to both spatial and temporal asymmetries
+in the optic flow field. However, the present model differs
+in an important way from the traditional Balance Strategy, in that
+it does not try to balance a conventional optic flow field. Instead,
+the model considers only signals generated from motion discontinuities
+(due to motion processing in \ac{MT}) in the balance equation,
+which seems to have similar functional implications as the steering
+potential function from \citep{Huang2006},
+generating a repeller signal that gets stronger the closer the robot
+gets to the obstacle.
+
+Visual self-motion is processed in a number of brain areas
+located in the \ac{IPS} and cingulate sulci, including \ac{MST},
+the \ac{VIP} region, and the \ac{CSv}~\citep{WallSmith2008}.
+Lesions to the \ac{IPS} lead
+to navigational impairments when retracting a journey shown
+from an egocentric viewpoint~\citep{Seubert2008}.
+There is evidence that object position and velocity
+might be encoded by a pathway that includes center-surround
+cells in \ac{MT} and cells in \ac{MSTv}~\citep{BerezovskiiBorn2000,DuffyWurtz1991b,Tanaka1993}.
+This object information might then
+be combined with information about self-motion gathered in \ac{MST}
+and \ac{VIP} from cues such as optic flow, eye rotations, and head
+movements~\citep{Andersen1985,Bradley1996,Colby1993,DuffyWurtz1991a}. 
+How neural processing in these
+regions could relate to steering control has been modeled in detail
+elsewhere~\citep{Browning2009a,Elder2009}.
+
+The present study demonstrates that it might not be necessary
+to explicitly model these areas in order to explain human psychophysics
+data about visually-guided steering and obstacle avoidance.
+In the case of a robot with a single stationary camera, there is
+no need to calculate eye or head rotations. As a result of this, there
+is no need for coordinate transformation, because retinotopic coordinates
+are equivalent to craniotopic coordinates. These simplified
+anatomical constraints allow for gross simplification of the underlying
+neural network model without restricting behavioral performance,
+at least under the present experimental conditions.
+
+
+\subsection{Model Limitations}
+\label{sec:ABR|discussion|limitations}
+Although the present model is able to generate human-like
+steering paths for a variety of experimental setups, it does not attempt
+to explain how the direction of travel is extracted from optic
+flow, how these signals are made independent of eye rotations and
+head movements, and how these signals can be converted into a
+craniotopic reference frame. However, these processes would need
+to be modeled if one were to consider a robot that could freely
+move around its head (or its eye). 
+A suitable future study could investigate
+how these computations and transformations could be
+achieved for a robot that could freely move around its head (or its
+eye), for example via a pan/tilt unit. The resulting cortical model
+might not only reproduce the present behavioral results, but also
+lead to robust behavior in more complicated experimental setups.
+
+As mentioned above, the behavioral model by \cite{FajenWarren2003}
+computes a steering trajectory using third-person
+information obtained directly from the scene geometry, namely
+the distance and angles to the goal and obstacle. In contrast, our
+model steers from a first-person view using active local sensing,
+which cannot directly compute the distance and angle to the goal
+and obstacle. Instead, distance is implicitly represented by neural
+activity, that is, the overall magnitude of the goal and activity
+related to obstacles. This is based on the assumption that perceived
+object size scales inversely with distance. While this assumption
+is generally true, it might not necessarily enable the model to
+generalize to arbitrarily complex settings. For example, the model
+might try to avoid a large but far away obstacle with the same
+dynamics as it would be a small but close-by one. In this case,
+an accurate estimate of object distance would be imperative. Also,
+in the current setup it is sometimes possible that motion signals
+caused by the obstacle can extend into contrast-rich neighboring
+regions, due to strong motion pooling in MT. A future study could
+alleviate this issue by giving the robot a means to establish clearer
+boundaries between objects and their surroundings, perhaps by
+modeling motion-form interactions~\citep{Baloch1997}.
+
+Binocular vision is an important source of depth perception that
+influences object segmentation in depth~\citep{Xiao1997}
+as well as the pre-planning and on-line control
+of movement~\citep{Patla1997}. Therefore it is possible
+that binocular vision might significantly benefit the task at 
+hand~\citep{Pauwels2010}. A suitable
+follow-up study would thus be to quantify the contribution of
+depth perception to the quality of stimulus responses in areas
+\ac{MT} as well as to the behavioral performance of the robotic agent.
+It is interesting to note that most \ac{MT} cells in the macaque
+receive balanced input from both eyes~\citep{MaunsellVanEssen1983}, 
+but it turns out that neurons in (at least) macaque \ac{MT}
+are not strongly tuned to motion in depth; i.e., no units are truly
+activated for stimuli changing disparity, which would simulate
+trajectories with components of motion toward or away from the
+animal~\citep{MaunsellVanEssen1983}. Therefore, extending the
+single camera version of the model by adding areas important for
+segmenting a scene and recognizing objects~\citep{Baloch1997},
+would also improve planning trajectories through space.
+Because vergence is not a factor for distances on the order of
+meters, scene contributions from brain areas such as V4, \ac{MST}, and
+parietal cortex are probably important for long-range trajectory
+planning. Moreover, these areas strongly interact with area \ac{MT}.
+
+Also, evidence suggests that humans use a different behavioral
+strategy when it comes to intercepting moving 
+targets~\citep{FajenWarren2003}.
+Having an agent steer toward a moving target
+according to the present behavioral dynamics is likely to result in
+pursuit behavior (as opposed to interception behavior), in which
+the agent always lags behind the target. Thus we do not expect
+the model to generalize to moving targets. However, it might
+be possible to extend the model to account for these scenarios.
+The \ac{SPL} might be involved in encoding
+future path information, such as the location of targets and
+obstacles, which are indicative of impending changes in heading
+and using this for the purpose of accurately timing motor 
+responses~\citep{Billington2013,Field2007}. Computing and updating
+of object locations in space, which might be relevant especially
+for moving targets, might be done by a network involving the
+precuneus and dorsal precentral 
+gyrus~\citep{Leichnetz2001,Parvizi2006}. However, not much is
+known about the neuronal representation of these signals.
+
+
+\subsection{Practical Implications}
+\label{sec:ABR|discussion|practical}
+
+The present work might be of interest to the neuroscientist,
+neurorobotics, and neuromorphic engineering communities for
+the following reasons.
+
+First, we have shown that the present approach is practical
+for studying the link between neural circuitry and behavioral
+performance. The real-world consequences of neural activity can
+be observed in real-time through visualization software and
+analyzed off-line. The behavioral responses were comparable to
+psychophysical data and the neuronal responses were comparable
+to neurophysiological data. We believe this to be a powerful
+approach to studying models of neural circuitry in real-world
+environments.
+
+Second, we have shown that the present system can handle
+neural network models of non-trivial size. By making use of
+the CUDA programming framework, we were able to accelerate
+computationally intensive parts of the model on a \ac{GPU}. Every
+\SI{50}{\milli\second}, model \ac{V1} computed a total of 
+$201,600$ filter responses ($80\times30$ pixel image, $28$ 
+spatiotemporal filters at three different scales), 
+and model \ac{MT} calculated the temporal dynamics of $40,000$
+Izhikevich spiking neurons and roughly $1,700,000$ conductance-based
+synapses. If necessary, the execution of the model could be
+sped up further, for example by parallelizing processing in the goal
+and obstacle components of the model.
+
+Third, implementing the entire model using spiking neurons
+would make the model amenable to emulation on neuromorphic
+hardware~\citep{Cassidy2014,Schemmel2010,Srinivasa2012}.
+This could enable the development of a self-contained,
+fully autonomous neurorobotic platform that combines
+the algorithmic advantages of the present model with the speed,
+efficiency, and scalability of neuromorphic hardware. In addition,
+since spiking neural networks communicate via the \ac{AER} protocol,
+the model could be interfaced with an event-based, neuromorphic
+camera as a sensory front-end~\citep{Lichtsteiner2008}. This would
+make it possible for the cortical network to react more quickly
+(at least on the millisecond scale, but theoretically even on the
+microsecond scale) to temporal changes in optic flow. It would
+also open the door for a complete neuromorphic vision system that
+operates with low power and rapid responses.
+
+Fourth, the system presented here is open source, extensible,
+and affordable. The complete \ac{ABR} source code is hosted on
+GitHub (\url{www.github.com/UCI-ABR}), and CARLsim 
+can be freely obtained from our website 
+(\url{www.socsci.uci.edu/∼jkrichma/CARLsim}). 
+The \ac{ABR} framework can be combined with
+a variety of R/C based vehicles, sensors, actuators, and C/C++ based
+software components. For example, it is straightforward to plug
+additional software components (such as image transformation
+with OpenCV) into the client-server loop, or mount IR sensors
+on the robot and read out the sensory values directly with the
+\ac{ABR} client software. We also provide online instructions and video
+tutorials to assemble the \ac{ABR} platform, which has an estimated
+cost of \$200 (excluding the phone). Because of this, we believe \ac{ABR}
+to be an attractive platform for students and researchers alike that
+will simplify both the development of neurorobotics platforms as
+well as the study of how neural machinery can be used to realize
+cognitive function.

@@ -1,0 +1,870 @@
+\chapter{Efficient Spiking Neural Network Model of Pattern Motion Selectivity}
+\label{ch:MT}
+
+\section{Introduction}
+In the last chapter I described an efficient implementation of the motion
+energy model \citep{SimoncelliHeeger1998}, which is based on the observation
+that directionally selective neurons in \ac{V1} act as linear spatiotemporal
+filters.
+The resulting \ac{V1} complex cells were tuned to a specific direction and
+speed of motion, but when presented with a more complicated pattern such as a
+plaid stimulus, they were unable to resolve local motion ambiguities
+(see Section~\ref{sec:BKG|aperture}) and signal the overall direction of
+pattern motion.
+
+In this chapter I turn to the question of how \ac{V1}-like motion signals
+can be integrated in order to solve the aperture problem.
+Conceptually speaking, this computation can be performed using the 
+\ac{IOC} principle (see Section~\ref{sec:BKG|integrationist}).
+\cite{Rust2006} revealed a procedure that could implement an \ac{IOC} solution
+to the aperture problem (see Section~\ref{sec:BKG|integrationist})
+in three consecutive steps: 1) spatial pooling over \ac{V1} or \ac{MT} \ac{CDS}
+cells with a wide range of preferred directions, 2) strong
+motion opponent suppression, and 3) a tuned normalization
+that may reflect center-surround interactions in \ac{MT}.
+Whereas the implementation by \cite{Rust2006} was restricted to
+simple firing-rate neurons (see Section~\ref{sec:BKG|rateModel}) and
+inputs that are mixtures of sinusoidal gratings of a fixed spatial
+and temporal frequency, it remains to be demonstrated how these computations
+can be performed in a network of spiking neurons \citep{Izhikevich2003}
+and conductance-based synapses
+that respect the detailed temporal dynamics of neuronal
+and synaptic integration of biological neurons.
+
+
+\section{Methods}
+
+In the following section I describe a two-stage \ac{SNN} model of \ac{MT}
+that can not only solve the aperture problem, but also be used to make
+perceptual decisions about ambiguous visual motion stimuli.
+
+\subsection{Two-Stage Spiking Model of MT}
+The two-stage model of \ac{MT} is based on the idea that \acf{CDS}
+cells represent an earlier stage of motion processing than \acf{PDS}
+cells~\citep{Movshon1985,Smith2005} 
+(see Section~\ref{sec:BKG|integrationist}), making \ac{MT} \ac{CDS} cells 
+similar in terms of direction and speed tuning to the model \ac{V1} 
+complex cells used by \cite{SimoncelliHeeger1998}. In fact, it has
+been shown that some \ac{MT} cells exhibit speed tuning characteristics
+similar to \ac{V1} complex cells~\citep{Priebe2006}, which has led
+to the suggestion that speed tuning in \ac{MT} might be inherited
+from \ac{V1}. \cite{LivingstoneConway2007} have shown that
+even some \ac{V1} simple cells are speed-tuned in macaque.
+Whereas \ac{CDS} cells give responses whose selectivity is stable
+and consistent from the time they are first activated, \ac{PDS} cells
+often respond with different and broader selectivity when first
+activated, sometimes even resembling \ac{CDS} cells, and only
+over a time-course on the order of \SI{100}{\milli\second}
+do they establish
+pattern selectivity~\citep{Smith2005}. At least in anesthetized
+monkeys, \ac{MT} is believed to consist of roughly \SI{40}{\percent}
+\ac{CDS} cells, \SI{25}{\percent} \ac{PDS} cells,
+and \SI{35}{\percent} unclassified cells~\citep{Movshon1985}.
+However, in awake animals the situation might be
+more complicated~\citep{Pack2001}.
+All cells in \ac{MT} were Izhikevich spiking neurons, whose
+membrane potential was thus described by a pair of coupled
+differential equations (see Section~\ref{sec:BKG|Izh}).
+
+
+\subsubsection{\acf{CDS} Cells}
+\label{sec:MT|CDS}
+
+\acf{CDS} cells are selective
+to a particular direction and speed of motion (an orientation in
+space-time). The name is an indication that these cells, when
+presented with a plaid stimulus consisting of two
+superimposed sinusoidal gratings, preferably respond to the motion
+of each grating (component) rather than the global motion
+pattern produced by the combination of the two 
+gratings~\citep{Movshon1985}.
+
+\ac{MT} \ac{CDS} cells had the same direction and speed preferences
+as \ac{V1} cells; that is, they preferentially responded to
+motion in one of eight different directions 
+(in \SI{45}{\degree} increments)
+and three different speeds ($1.5$ pixels per frame, $0.125$ pixels
+per frame, and $9$ pixels per frame) at any pixel location.
+The only difference was that \ac{MT} cells had a larger receptive field,
+achieved by Gaussian spatial pooling.
+
+In order to model response normalization equivalent to the
+one in Eq.~$6$ of \cite{SimoncelliHeeger1998}, we introduced
+a pool of inhibitory interneurons, which integrated the
+activity of all \ac{MT} \ac{CDS} cells within a large Gaussian neighborhood
+(across direction and speed), and projected back to all
+three pools of \ac{MT} \ac{CDS} cells with one-to-one connections.
+This response normalization is important to qualitatively reproduce
+the speed tuning curves (see Section~\ref{sec:MT|results|speed}).
+
+
+\subsubsection{\acf{PDS} Cells}
+\label{sec:MT|PDS}
+\acf{PDS} cells differ from \ac{CDS} cells in that they, 
+when presented with a plaid stimulus
+consisting of two superimposed sine gratings, preferentially
+respond to the overall motion direction, not the individual
+components~\citep{Movshon1985}. Because visual stimuli
+typically contain many oriented components, local motion
+measurements must be appropriately combined in order to
+sense the true global motion of the stimulus (aperture problem).
+Thus it has been suggested that \ac{PDS} neurons reflect a
+higher-order computation that acts on \ac{V1} or \ac{MT} \ac{CDS} 
+afferents~\citep{Movshon1985}. \ac{MT} \ac{PDS} cells in our model
+received direct input from \ac{CDS} cells, and thus conserved their
+speed and direction preferences.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\textwidth]{mt_pds}
+  \caption{
+  \ac{PDS} cells can be constructed in three steps:  
+  1) spatial pooling over \ac{MT} \ac{CDS} cells with a wide range of 
+  preferred directions, 2) strong motion opponent suppression, and
+  3) a tuned normalization that may reflect center-surround interactions
+  in \ac{MT} \citep{Rust2006}.}
+  \label{fig:MT|PDS}
+\end{figure}
+
+Pooling over MT \ac{CDS} cells and opponent suppression
+were implemented by pooling \ac{CDS} responses across spatial
+position and across direction preference
+(see Fig.~\ref{fig:MT|PDS}), such that the strength
+of a projection from a \ac{CDS} cell selective to motion direction
+$\theta_{\textrm{CDS}}$ at location
+$(x_{\textrm{CDS}}, y_{\textrm{CDS}})$
+to a \ac{PDS} cell selective to motion
+direction $\theta_{\textrm{PDS}}$ at location
+$(x_{\textrm{PDS}}, y_{\textrm{PDS}})$
+can be expressed as:
+\begin{equation}
+w_{\textrm{CDS} \rightarrow \textrm{PDS}} = 
+	\alpha_{\textrm{CDS} \rightarrow \textrm{PDS}}
+    \cos(\Delta\theta)
+    \exp \Bigg(
+    \frac{
+    	-\Big((\Delta x)^2 + (\Delta y)^2\Big)
+    }{
+    	2 \sigma_{\textrm{PDS,pool}}^2
+    } \Bigg),
+\label{eqn:MT|CDStoPDS}
+\end{equation}
+where
+$\Delta \theta = \theta_{\textrm{PDS}} - \theta_{\textrm{CDS}}$,
+$\Delta x = x_{\textrm{PDS}} - x_{\textrm{CDS}}$,
+$\Delta y = y_{\textrm{PDS}} - y_{\textrm{CDS}}$,
+the half-width of the Gaussian neighborhood
+$\sigma_{\textrm{PDS,pool}} = 3$~pixels, 
+and $\alpha_{\textrm{CDS} \rightarrow \textrm{PDS}}$
+is a scaling factor. If the resulting
+weight was negative, due to
+$|\Delta \theta| > \pi/2$, the projection was
+relayed to a population of inhibitory interneurons. Following
+the reasoning of \cite{Rust2006}, the pattern index of a MT
+cell can be reduced simply by sharpening the cosine tuning
+component in Fig.~\ref{eqn:MT|CDStoPDS}
+(see third column of Fig.~$6$ in \cite{Rust2006}).
+
+Tuned normalization was implemented by an inhibitory
+self-connection with a narrowly tuned Gaussian across direction
+(see second column of Fig.~$6$ in \cite{Rust2006}).
+Analogous to previous projections, this was implemented by
+relaying the inhibitory projection to a pool of inhibitory interneurons:
+\begin{equation}
+w_{\textrm{PDS} \rightarrow \textrm{PDS,inh}} = 
+    \exp \Bigg(
+    \frac{
+    	-(\Delta \theta)^2
+    }{
+    	2 \sigma_{\textrm{PDS,tuned,dir}}^2
+    } \Bigg)
+    \exp \Bigg(
+    \frac{
+    	-\Big((\Delta x)^2 + (\Delta y)^2\Big)
+    }{
+    	2 \sigma_{\textrm{PDS,tuned,loc}}^2
+    } \Bigg),
+\label{eqn:MT|PDStoPDSinh}
+\end{equation}
+where
+$\sigma_{\textrm{PDS,tuned,dir}} < \SI{45}{\degree}$
+(such that only one of the eight subpopulations was activated),
+$\sigma_{\textrm{PDS,tuned,loc}} = 2$~pixels, and
+the inhibitory population sent one-to-one connections back
+to the pool of MT \ac{PDS} cells.
+
+
+\subsection{Spiking Layer of LIP Decision Neurons}
+\label{sec:MT|LIP}
+
+A layer of decision neurons was responsible for integrating
+over time the direction-specific sensory information that is
+encoded by the responses of MT \ac{PDS} cells. This information
+was then used to make a perceptual decision about the presented
+visual stimulus, such as determining the global drift
+direction of a field of random moving dots in a motion
+discrimination task (presented in Section~\ref{sec:MT|results|RDK}).
+A good candidate for such an integrator
+area in macaques might be \ac{LIP}, where neurons have been
+found whose firing rate are predictive of the behavioral \ac{RT} 
+in a motion discrimination 
+task~\citep{ShadlenNewsome2001,RoitmanShadlen2002}.
+Spiking neurons in a simulated \ac{LIP} area were grouped into
+eight pools of $50$ neurons, each pool receiving projections
+from exactly one of the eight pools of \ac{MT} \ac{PDS} cells with
+\SI{10}{\percent} connection probability. 
+As a result of this connectivity
+profile, each pool of decision neurons accumulated sensory
+evidence for a particular direction of motion, based on the
+response of \ac{MT} \ac{PDS} cells.
+Additionally, each decision pool received inhibitory projections
+from other decision pools if the two preferred directions
+of motion were close to opposite. More precisely, a
+decision neuron in pool $i$ (thus selective to direction
+$\theta_i$) 
+received an inhibitory projection from neurons in pool $j$ 
+(selective to direction $\theta_j$) with strength:
+\begin{equation}
+w_{\textrm{dec,inh} \rightarrow \textrm{dec}} = 
+	\cos(\theta_i - \theta_j + \pi),
+\label{eqn:MT|LIP}
+\end{equation}
+and \SI{10}{\percent} connection probability.
+
+\ac{LIP} did not employ any internal noise.
+
+
+
+\section{Results}
+
+We conducted a number of experiments to ensure the accuracy
+and efficiency of our implementation. Here we demonstrate
+that the network is able to exhibit direction and speed tuning
+for drifting bar and plaid stimuli that are in agreement with
+neurophysiological recordings, and that the network qualitatively
+reproduces both the psychometric and chronometric
+function in a \ac{2AFC} motion discrimination task.
+Additionally,
+we measured both the computational performance and memory
+consumption of our model and compared it to the S\&H
+C/MATLAB implementation.
+
+\ac{GPU} simulations were run on a NVIDIA Tesla M2090
+(\SI{6}{\giga\byte} of memory) using \ac{CUDA}, 
+and \ac{CPU} simulations (including Matlab) 
+were run on an Intel Xeon X5675 at
+\SI{3.07}{\giga\hertz} (\SI{24}{\giga\byte} of \ac{RAM}). 
+The same exact network running
+on a single \ac{GPU} produced all results; the only difference per
+experiment was the presented input stimulus. The full network
+consisted of $153,216$ neurons and approximately $33$ million
+synapses, which corresponds to a $32\times32$ pixels input
+resolution.
+
+
+\subsection{Direction Tuning}
+\label{sec:MT|results|direction}
+We tested the ability of our model \ac{MT} cells to signal the
+direction of motion for drifting grating and plaid stimuli.
+Responses were simulated for \ac{CDS} cells and \ac{PDS} cells in
+\ac{MT}. The first stimulus was a drifting sinusoidal grating
+consisting of spatial and temporal frequency components that
+were preferred by \ac{MT} neurons selective to a speed of $1.5$
+pixels per frame (that is, 
+$\omega_\textrm{spat}=0.1205$ cycles per pixel,
+$\omega_\textrm{temp}=0.1808$ cycles per frame). 
+The second stimulus was a pair of
+superimposed gratings drifting in a direction orthogonal to
+their orientation, which together formed a coherently drifting
+plaid pattern. The two gratings both had the same spatial
+frequency $\omega_\textrm{spat}$, 
+but their orientation and drift direction differed
+by \SI{120}{\degree}. The direction of these particular patterns lay
+equidistant between the directions of motion of the two component
+gratings. The stimulus contrast for both grating and
+plaid was \SI{30}{\percent}.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\textwidth]{mt_polar}
+  \caption{
+  Polar plots of direction tuning for a sinusoidal grating 
+  \textbf{a}--\textbf{d} and a plaid stimulus \textbf{e}--\textbf{h}
+  drifting upwards, where the angle denotes motion direction and the 
+  radius is the firing rate in spikes per second. 
+  Tuning curves were obtained by taking the mean firing rate of a 
+  neuron to a drifting grating during \SI{2}{\second} of stimulus
+  presentation, averaged over all neurons in the population selective 
+  to the same stimulus direction (black: mean neuronal response, 
+  blue: mean plus standard deviation on the population average, 
+  green: mean minus standard deviation). Shown are
+  mean responses for \ac{V1} complex cells (\textbf{b} and \textbf{f}),
+  \ac{MT} \ac{CDS} cells (\textbf{c} and \textbf{g}),
+  and \ac{MT} \ac{PDS} cells (\textbf{d} and \textbf{h}). 
+  Only \ac{MT} \ac{PDS} cells h responded to the motion of the entire 
+  plaid pattern rather than to the motions of the individual 
+  component gratings.}
+  \label{fig:MT|polar}
+\end{figure}
+
+Our model was able to reproduce direction tuning curves
+that are in agreement with single-cell electrophysiological
+data~\citep{Movshon1985,RodmanAlbright1989,MovshonNewsome1996}
+for \ac{V1} cells, \ac{MT} \ac{CDS} cells, and \ac{MT} \ac{PDS}
+cells.
+Fig.~\ref{fig:MT|polar} shows polar plots of direction tuning for 
+\ac{V1} neurons (Panels B and F), \ac{MT} \ac{CDS} cells 
+(Panels C and G), and \ac{MT} \ac{PDS} cells (Panels d and h), 
+where the angle denotes
+motion direction and the radius is the firing rate in spikes per
+second (compare also Fig. $9$ in \cite{SimoncelliHeeger1998}
+and Fig. $1$ in \cite{Rust2006}). Tuning curves were obtained
+by calculating the mean firing rate of a neuron's response to a
+drifting grating during two seconds of stimulus presentation.
+These responses were averaged over all neurons in the population
+selective to the same direction of motion (black: mean
+neuronal response, blue: mean plus standard deviation on the
+population average, green: mean minus standard deviation).
+As a result of suppressing edge effects, neurons that coded for
+locations closer than five pixels from the image border were
+only weakly activated, and were thus excluded from the plot.
+The tuning curves in the top row were generated in response to
+the sinusoidal grating drifting upwards, which is illustrated in
+Panel A. Analogously, the tuning curves in the bottom row
+were generated in response to the plaid stimulus drifting upwards,
+which is illustrated in Panel E (red arrow: pattern motion
+direction, black arrows: motion direction of the grating components).
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\textwidth]{mt_pattern_idx}
+  \caption{
+  The pattern index is computed for all \ac{MT} \ac{CDS} cells
+  (blue) and all \ac{MT} \ac{PDS} cells (red), and plotted as a 
+  Fisher $Z$-score. The black solid lines are the classification 
+  region boundaries, indicating that all \ac{MT} \ac{CDS} cells have
+  indeed been classified as component-selective, and all \ac{MT}
+  \ac{PDS} cells have been classified as pattern-selective.}
+  \label{fig:MT|patternIdx}
+\end{figure}
+The direction tuning curve for gratings is unimodal
+for all three neuron classes, but the direction tuning curve for
+plaids shows two distinct lobes for \ac{V1} complex cells (Panel F)
+and \ac{MT} \ac{CDS} cells (Panel G). Each lobe corresponds to one of
+the component gratings of the plaid. Only \ac{MT} \ac{PDS} cells (Panel
+H) responded to the motion of the entire plaid pattern rather
+than to the motions of the individual component gratings.
+
+In order to quantify the pattern selectivity of our model
+\ac{PDS} cells, we computed the pattern index for each \ac{CDS} and
+\ac{PDS} cell (see Fig.~\ref{fig:MT|patternIdx})
+using the standard 
+technique~\citep{Movshon1985,MovshonNewsome1996,Smith2005}.
+Based on the tuning curve for the drifting grating described
+above, we generated two predictions for each cell's tuning
+curve to drifting plaids (Fig.~\ref{fig:MT|patternIdx}A); 
+either the cell would respond
+to the plaid in the same way as it responded to the grating
+(``pattern'' prediction, black solid line), or it would respond
+independently to the two grating components (``component''
+prediction, black dashed line). We then computed the correlation
+$(r_c, r_p)$ between the cell's actual response to a plaid stimulus
+and the component and pattern predictions. To remove
+the influence of correlations between the predictions themselves,
+we calculated partial correlations $R_c$ and $R_p$ for the
+component and pattern predictions, respectively, using the
+standard formulas:
+\begin{align}
+R_c & = \frac{r_c - r_p r_{pc}}{\sqrt{(1-r_p^2)(1-r_{pc}^2)}}, \label{eqn:MT|Rc} \\
+R_p & = \frac{r_p - r_c r_{pc}}{\sqrt{(1-r_c^2)(1-r_{pc}^2)}}, \label{eqn:MT|Rp}
+\end{align}
+where $r_c$ and $r_p$ are the simple correlations between the data
+and the component and pattern predictions, respectively, and
+$r_{pc}$ is the simple correlation between the 
+predictions~\citep{MovshonNewsome1996}.
+Because the sampling distribution of
+Pearson's $r$ is not normal, we converted the correlation measures
+$R_c$ and $R_p$ to a Fisher $Z$-score,
+\begin{align}
+Z_c & = 
+	\frac{
+    	0.5 \ln\big( \frac{1+R_c}{1-R_c} \big)
+    }{
+    	\sqrt{ \frac{1}{df} }
+    } = \frac{
+    	\operatorname{arctanh}(R_c)
+    }{
+    	\sqrt{\frac{1}{df}}
+    }, \label{eqn:MT|Zc} \\
+Z_p & = 
+	\frac{
+    	\operatorname{arctanh}(R_p)
+    }{
+    	\sqrt{\frac{1}{df}}
+    }, \label{eqn:MT|Zp}
+\end{align}
+where the numerator is the Fisher $r$-to-$Z$ transformation and
+$df$ is the degrees of freedom, equal to the number of values in
+the tuning curve (in our case $24$) minus three~\citep{Smith2005}.
+The $Z$-scores of all \ac{CDS} and \ac{PDS} cells (excluding
+neurons coding for locations closer than five pixels from the
+image border) in the network are plotted in Fig.~\ref{fig:MT|patternIdx}B.
+Each value of $Z_c$ and $Z_p$ was tested for significance 
+using a criterion of $1.28$, which is equivalent to 
+$p=0.90$~\citep{Smith2005}. For a \ac{PDS} cell (red) to be judged as
+pattern-selective, the value of $Z_p$
+had to exceed the value of $Z_c$ by a minimum of $1.28$ (black
+solid lines). All \ac{PDS} cells in Fig.~\ref{fig:MT|patternIdx}B
+met this criterion and, therefore, were indeed pattern-selective.
+Analogously, all \ac{CDS} cells (blue) could be judged as 
+component-selective.
+
+
+\subsection{Speed Tuning}
+\label{sec:MT|results|speed}
+We next considered the ability of our implementation to
+reproduce \ac{MT} speed tuning curves as demonstrated in
+\cite{SimoncelliHeeger1998}. \ac{MT} neurons have been divided
+into three distinct classes based on their speed tuning 
+properties~\citep{RodmanAlbright1987}.
+The first class of neurons is
+relatively sharply tuned for a particular speed and direction of
+motion (``speed-tuned'' or ``band-pass''). This class of neurons
+is also strongly suppressed by motion in the anti-preferred
+(opposite) direction; the suppression is strongest when the
+stimulus moves in the opposite direction at roughly the preferred
+speed. The second class of neurons prefers low speeds
+in both the preferred and anti-preferred direction (``low-pass'').
+The third class responds to high speed stimuli in both directions
+(``high-pass'').
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.5\textwidth]{mt_speed}
+  \caption{
+  Speed tuning curves for three different classes of \ac{MT} neurons.
+  The stimulus consisted of a single bar drifting over the entire 
+  visual field either to the right (preferred direction) or to the 
+  left (anti-preferred direction) at different speeds.
+  $\mathbf{A}$, Response of a ``speed-tuned'' neuron (selective to 
+  motion at $1.5$ pixels per frame). 
+  $\mathbf{B}$, Response of a ``low-pass'' neuron (selective to motion 
+  at $0.125$ pixels per frame).
+  $\mathbf{C}$, Response of a ``high-pass'' neuron (selective to 
+  motion at $9$ pixels per frame).}
+  \label{fig:MT|speed}
+\end{figure}
+
+As shown in Fig.~\ref{fig:MT|speed}, our implementation
+faithfully reproduces the speed
+tuning characteristics of these three distinct classes 
+(compare also Fig. $10$ in \cite{SimoncelliHeeger1998}).
+The stimulus consisted of a
+single bar drifting over the entire visual field either to the right
+(preferred direction) or to the left (anti-preferred direction) at
+different speeds. Each data point is the mean firing rate of a
+particular \ac{MT} \ac{CDS} neuron located near the center of the
+visual field, averaged over the time course of a specific speed
+and direction configuration. The relatively low mean firing
+rates can be explained by the fact that the stimulus resides
+outside the neuron's receptive field for most of the time. The
+first neuron class (Panel a, ``band-pass'') preferentially
+responded to a bar moving at $1.5$ pixels per frame to the right,
+and was strongly suppressed when the bar moved at the same
+speed to the left. The second neuron class (Panel b, ``low-pass'')
+exhibited a preference for low speeds ($0.125$ pixels per
+frame) in both directions. With increasing speed the response
+of the neuron to dots moving in the anti-preferred direction
+weakened. This behavior can be explained by the fact that the
+Fourier planes corresponding to low speed motions in opposite
+directions are both close to the $\omega_t=0$ plane, and thus close
+to each other~\citep{SimoncelliHeeger1998}. Also, this class of
+neurons was suppressed by fast stimuli moving in either
+direction. Similarly, the third neuron class (Panel c, ``high-pass''),
+which had a high preferred speed ($9$ pixels per frame)
+in one direction, was excited by fast stimuli moving in the
+opposite direction, but was suppressed by slow stimuli moving
+in either direction.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\textwidth]{mt_rdk}
+  \caption{
+  \acf{RDK}. The \ac{RDK} stimulus was constructed of approximately 
+  $150$ dots (\SI{15}{\percent} dot density, maximum stimulus
+  contrast) on a $32\times32$ input movie.
+  \textbf{a}, Psychometric function. The network's accuracy 
+  increased with increasing motion strength (coherence level).
+  \textbf{b}, Chronometric function. The network's \ac{RT}
+  decreased with increasing motion strength.}
+  \label{fig:MT|RDK}
+\end{figure}
+
+\subsection{Random Dot Kinematogram}
+\label{sec:MT|results|RDK}
+In order to compare the performance of the model with behavioral
+data from \ac{2AFC} motion discrimination tasks, we
+developed a paradigm equivalent to the \ac{RDK} experiments
+performed with monkeys and 
+humans~\citep{RoitmanShadlen2002,Resulaj2009}.
+We constructed a simple decision
+criterion based on the race 
+model~\citep{ShadlenNewsome2001,SmithRatcliff2004},
+in which eight pools of
+decision neurons (one for each of the directions of motion,
+$50$ neurons per pool) sum the responses of \ac{MT} \ac{PDS} cells
+selective to a particular direction and speed of motion. The
+first decision pool to emit $500$ spikes (on average ten spikes
+per neuron) ``won the race'' and thus signaled a choice for that
+direction. A correct decision was the event in which the
+winning decision pool was selective to the actual motion
+direction of the stimulus. The time it took the network to reach
+the decision threshold was termed the \ac{RT}.
+
+The \ac{RDK} stimulus was constructed of approximately
+$150$ dots (\SI{15}{\percent} dot density, 
+maximum stimulus contrast) on a
+$32\times32$ input movie. 
+% An example frame is shown as the input stimulus in Fig. 1. %\FIXME
+Each stimulus frame was presented to the
+network for \SI{50}{\milli\second}. 
+A trial consisted of $20$ stimulus frames of a
+particular motion direction and coherence level. Motion coherence
+in the stimulus was varied between $0$ and \SI{50}{\percent}.
+Coherently moving dots drifted in one of eight possible directions,
+in \SI{45}{\degree} increments, at a speed of $1.5$ pixels per frame.
+Note that, therefore, only \ac{MT} \ac{PDS} cells that were 
+selective to this particular stimulus speed were connected 
+to the decision layer.
+
+Choice accuracy and \ac{RT} as a function of task difficulty
+(coherence of dot motion) are shown in Fig.~\ref{fig:MT|RDK}
+(Panel a and b, respectively), 
+where the thick red lines are human behavioral
+data extracted from a \ac{RT} experiment (see Fig.~$3$ and Table~$2$
+in \cite{RoitmanShadlen2002}) and simulated data is shown in
+blue. Each data point (blue) is the mean outcome of $80$ trials
+(fixed coherence level, ten repetitions per motion direction),
+and the vertical bars are the standard error and standard
+deviation for accuracy (Panel a) and \ac{RT} (Panel b),
+respectively. As in Fig.~$3$ in \cite{RoitmanShadlen2002},
+we did not show \acp{RT} on error trials.
+Our network performance is comparable to human accuracy,
+and it qualitatively emulates the effect of motion strength
+on \ac{RT}. Decreasing \ac{RT} for a relatively easy task (e.g., high
+motion coherence) is a direct consequence of the race model.
+Conversely, when the difficulty of a decision is high (e.g., low
+coherence level), information favoring a particular response
+grows more slowly~\citep{SmithRatcliff2004}, and the probability
+of making an error is higher~\citep{ShadlenNewsome2001}. The
+quantitative difference between behavioral and
+simulated \ac{RT} in Fig.~\ref{fig:MT|RDK} could be eradicated 
+by fine-tuning the excitatory weights from \ac{MT} cells to the
+decision layer.
+However, such an exercise would be meaningless, because
+our model does not take into consideration neural areas involved
+in characteristics of the decision-making process that
+influence the length of \ac{RT}, such as the time-course of \ac{LIP}
+neuronal dynamics or the gating of saccadic eye 
+movements~\citep{ShadlenNewsome2001},
+which have been successfully modeled in detail by 
+others~\citep{GrossbergPilly2008}.
+
+
+\subsection{Computational Performance}
+\label{sec:MT|results|performance}
+
+Comparing the performance between \ac{GPU} simulation
+mode and \ac{CPU} simulation mode with the full network on
+the specific processor remains to be demonstrated. In \ac{GPU}
+mode all data structures are allocated on the \ac{GPU}, whereas in
+\ac{CPU} mode the network would be allocated on the \ac{CPU}'s
+memory, and only the generation of motion energy responses
+(written in \ac{CUDA}) would be delegated to the \ac{GPU}. Hence we
+evaluated the computational performance by running the full
+network in both \ac{CPU} and \ac{GPU} mode with input images from
+$16\times16$ pixels ($38,784$ neurons) to $64\times64$ pixels 
+($610,944$ neurons).
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\textwidth]{mt_speedup}
+  \caption{
+  \textbf{a}, Simulation speed is given as the ratio of 
+  execution time over the
+  simulation time for networks run in \ac{CPU} mode (blue) and 
+  \ac{GPU} mode (red). In both cases, the \ac{V1} \ac{CUDA}
+  implementation was executed (green), which is part of the total
+  simulation time (in blue and red).
+  Note the log scale on the ordinate.
+  The \ac{GPU} simulations did not only run faster, but simulation 
+  speed scaled better with network size.
+  \textbf{b}, Speedup is given as the ratio of \ac{CPU} execution 
+  time over \ac{GPU} execution time.}
+  \label{fig:MT|speedup}
+\end{figure}
+
+The result is shown in Fig.~\ref{fig:MT|speedup}.
+The simulation speed is given as the ratio of execution time
+over the simulation time (see Fig.~\ref{fig:MT|speedup}a)
+for networks run in \ac{CPU} mode (blue) and \ac{GPU} mode (red). 
+Note that in both modes, the \ac{V1} \ac{CUDA} implementation 
+was executed (green), whose run-time is part of the total 
+simulation time (in blue and red). 
+The \ac{GPU} simulations not only ran faster, but
+also simulation speed scaled better with network size. Note
+that the \ac{CPU} simulation was a single-threaded computation.
+The full network at $40\times40$ input resolution ($239,040$ neurons)
+ran in real-time on the \ac{GPU}. At $32\times32$ input resolution
+($153,216$ neurons) the simulation was $1.5$ times faster than
+real time. This result compares favorably with previous releases
+of our simulator~\citep{Nageswaran2009,Richert2011},
+which is partly due to code-level optimizations, but
+mostly due to differences in \ac{GPU} hardware and the \ac{V1} stage
+of the network being spatiotemporal filters instead of spiking
+neurons.
+Speedup was computed as the ratio of \ac{CPU} to \ac{GPU} execution
+time. As the network size increased, the \ac{GPU} simulations
+showed a significant speedup over the \ac{CPU} 
+(see Fig.~\ref{fig:MT|speedup}b).
+The largest network we could fit on a single \ac{GPU}
+roughly corresponded to $64\times64$ input resolution ($610,944$
+neurons), which ran approximately $30$ times faster than on
+the \ac{CPU}. Larger networks currently do not fit on a single 
+\ac{GPU} and as such must be run on the \ac{CPU}, 
+which would be more than $70$ times slower than real time 
+judging from Fig.~\ref{fig:MT|speedup}a.
+
+
+
+\section{Discussion}
+We presented a large-scale spiking model of visual area \ac{MT}
+that i) is capable of exhibiting both component and pattern
+motion selectivity, ii) generates speed tuning curves that are in
+agreement with electrophysiological data, iii) reproduces behavioral
+responses from a 2AFC task, iv) outperforms a previous
+rate-based implementation of the motion energy 
+model~\citep{SimoncelliHeeger1998} in terms of computational
+speed and memory usage, v) is implemented on a publicly
+available \ac{SNN} simulator that allows for real-time execution
+on off-the-shelf \acp{GPU}, and vi) is comprised of a neuron model,
+synapse model, and \ac{AER},
+which is compatible with recent neuromorphic 
+hardware, such as HRL~\citep{Srinivasa2012}, IBM~\citep{Cassidy2014},
+NeuroGrid~\citep{Boahen2006}, SpiNNaker~\citep{Khan2008}, and
+BrainScaleS~\citep{Schemmel2010}.
+
+The model is based on two previous models of motion
+processing in 
+\ac{MT}~\citep{SimoncelliHeeger1998,Rust2006},
+but differs from these models in several ways. First, our
+model contains the tuned normalization in the \ac{MT} stage that
+was not present in \cite{SimoncelliHeeger1998} but introduced
+by \cite{Rust2006}. Second, the implementation by \cite{Rust2006}
+was restricted to inputs that are mixtures of
+$12$ sinusoidal gratings of a fixed spatial and temporal frequency,
+whereas our model can operate on any spatiotemporal
+image intensity. Third, \ac{MT} \ac{PDS} cells in our model sum over
+inputs from \ac{MT} \ac{CDS} cells as opposed to inputs from
+\ac{V1} cells, although the two approaches are conceptually equivalent.
+Fourth, instead of using linear summation and a static nonlinear
+transformation, all neuronal and synaptic dynamics in our
+model \ac{MT} were achieved using Izhikevich spiking neurons
+and conductance-based synapses.
+
+One could argue that the inclusion of Izhikevich spiking
+neurons and conductance-based synapses is unnecessary,
+since previous incarnations of the motion energy model did
+not feature these mechanisms yet were perfectly capable of
+reproducing speed tuning and motion selectivity. However,
+our approach is to be understood as a first step towards modeling
+large-scale networks of visual motion processing in more
+biological detail, with the ultimate goal of understanding
+how the brain solves the aperture problem, among other open
+issues in motion perception. Integrating the functionality demonstrated
+in previous models with more neurobiologically
+plausible neuronal and synaptic dynamics is a necessary first
+step for analyzing the temporal dynamics of model neurons
+in \ac{MT}, which may i) help to explain how \ac{MT} \ac{PDS} cell
+establish their pattern selectivity not instantly but over a
+time-course on the order of \SI{100}{\milli\second}~\citep{Smith2005},
+and ii) enable the addition of spike-based learning rules such as
+\ac{STDP}; both of which might be harder to achieve with previous
+model incarnations. Additionally, the introduction of the
+present neuron model, synapse model, and \ac{AER} did not affect performance, yet enabled the
+integration of the S\&H model with recent neuromorphic 
+hardware~\citep{Srinivasa2012} (see also 
+Section~\ref{sec:MT|disc|practice}).
+
+On the other hand, it is possible (if not likely) that some
+response dynamics produced by the neural circuitry in the
+retina, the \ac{LGN}, and \ac{V1} may
+account for certain response properties of neurons in \ac{MT}
+that the current model is not yet able to capture.
+Thus future work could be directed towards implementing
+the entire early visual system in the spiking domain.
+However, for the purpose of this study we deem a rate-based
+preprocessor to be an adequate abstraction, as the core functionality
+of directionally selective cells in \ac{V1} seem to be 
+well-characterized
+by local motion energy 
+filters~\citep{AdelsonBergen1985,DeAngelis1993,MovshonNewsome1996}.
+
+
+\subsection{Neurophysiological Evidence and Model Alternatives}
+\label{sec:MT|disc|evidence}
+There is evidence that \ac{MT} firing rates represent the velocity of
+moving objects using the \ac{IOC} principle. A psychophysical
+study showed that the perception of moving plaids depends on
+conditions that specifically affect the detection of individual
+grating velocities~\citep{AdelsonMovshon1982}. This is consistent
+with a two-stage model in which component velocities
+are first detected and then pooled to compute pattern velocity.
+Subsequent physiological studies broadly support such a cascade
+model~\citep{PerroneThiele2001,Rust2006,Smith2005}.
+
+However, other psychophysical results exist where the
+perceived direction of plaid motion deviates significantly from
+the \ac{IOC} direction~\citep{FerreraWilson1990,BurkeWenderoth1993}.
+Alternatives to the \ac{IOC} principle are, for
+example, \ac{VA} or feature tracking. \ac{VA} predicts
+that the perceived pattern motion is the vector average of the
+component velocity vectors. Blob or feature tracking is the
+process of locating something (a ``feature'') that does not suffer
+from the aperture problem, such as a bright spot or a T-junction,
+and tracking it over time~\citep{Wilson1992}.
+Ultimately, one needs to consider the interactions of the motion
+pathway with form mechanisms~\citep{Majaj2007}, and
+model the processing of more complex stimuli (e.g., motion
+transparency, additional self-motion, multiple moving 
+objects)~\citep{Raudies2011,Layton2012}. Clarifying by which
+rule (or combination of rules) the brain integrates motion
+signals is still a field of ongoing research. For recent reviews
+on the topic see \cite{BradleyGoyal2008,Nishida2011}.
+
+Although clear evidence for spatiotemporal frequency inseparability
+in \ac{MT} neurons has been found~\citep{PerroneThiele2001},
+which supports the idea of a motion energy
+model, later studies reported it to be a weak 
+effect~\citep{Priebe2003,Priebe2006}. 
+The actual proportion of neurons in the
+primate visual system that are tuned to spatiotemporal frequency
+is currently not known.
+
+
+\subsection{Model Limitations}
+\label{sec:MT|disc|limitations}
+Although our model is able to capture many attributes of
+motion selectivity (e.g., direction selectivity, speed tuning,
+component and pattern motion), it is not yet complete for the
+following reasons. First, it does not explicitly specify the exact
+pattern velocity, but instead reports an activity distribution
+over the population of \ac{MT} neurons, whose firing rates are
+indicative of the observed pattern motion. In order to estimate
+the speed of a target stimulus, it has been proposed to use a
+suitable population decoding mechanism that operates on \ac{MT}
+responses~\citep{Perrone2012,Hohl2013}. Second, our
+model does not attempt to predict the temporal dynamics of
+\ac{MT} \ac{PDS} cells, which often respond with broad selectivity
+when first activated, sometimes even resembling \ac{CDS} cells,
+and only over a time-course on the order of 
+\SI{100}{\milli\second} establish
+their pattern motion selectivity~\citep{Smith2005}. A possible
+explanation for these temporal dynamics is given 
+in~\cite{Chey1997}. Third, it does not consider the visual form
+pathway and abstracts early visual details that may be critical
+for operation in natural settings. Fourth, the extent to which
+each stage in the motion energy model can be mapped onto
+specific neuronal populations is rather limited. Tiling the
+spatiotemporal frequency space according to the motion energy
+model is biologically implausible, and the temporal
+extent of the filters is unrealistically long (especially the low
+speed filters). However, a way to combine spatiotemporal
+filters based on \ac{V1} neuron properties into a pattern motion
+detector has been proposed in \cite{PerroneThiele2002}.
+
+Another more fundamental limitation is that the S\&H
+model (or for that matter, any spatiotemporal-energy based
+model including the elaborated Reichardt detector) can only
+sense so-called first-order motion, which is defined as spatiotemporal
+variations in image intensity (first-order image
+statistics) that give rise to a Fourier spectrum. Second-order
+stimuli, such as the motion of a contrast modulation over a
+texture, are non-Fourier and thus invisible to the model, yet
+can be readily perceived by humans~\citep{ChubbSperling1988}.
+In addition, the existence of a third motion channel
+has been suggested, which is supposed to operate through
+selective attention and saliency maps~\citep{LuSperling1995}.
+Also, \ac{MT} has been shown to be involved in color-based
+motion perception~\citep{Thiele2001}.
+
+There is also a plainly technical limitation to our model,
+which is manifested in the amount of available \ac{GPU} memory.
+Due to their size, large-scale spiking networks have demanding
+memory requirements. The largest network that could fit
+on a single NVIDIA Tesla M2090 (with \SI{6}{\giga\byte} of memory) was
+comprised of $610,944$ neurons and approximately $137$ million
+synapses, which corresponds to processing a $64\times64$ input
+video. In order to run larger networks on current-generation
+\ac{GPU} cards, a change in model (or software and hardware)
+architecture is required. One should note that this is only a
+temporary limitation and could be overcome by
+the next generation of \ac{GPU} cards. Another possible
+solution would be to employ multi-\ac{GPU} systems; however,
+more work is required to efficiently integrate our \ac{SNN} simulator
+with such a system.
+
+
+\subsection{Practical Implications}
+\label{sec:MT|disc|practice}
+The present network might be of interest to the neuroscientist
+and computer vision research communities for the following
+reasons.
+
+First, our implementation outperforms the S\&H C/MATLAB
+implementation by orders of magnitude in terms of computational
+speed and memory usage. Thus our \ac{CUDA} implementation
+can be used to save computation time, as well as be
+applied to input resolutions that the C/MATLAB implementation
+cannot handle due to memory constraints. Additionally, the
+\ac{CUDA} implementation can act as a stand-alone module that
+could potentially be used in computer vision as an alternative
+to computationally expensive operations such as Gabor filtering
+for edge detection or dense optic flow computations.
+
+Second, we have demonstrated that our approach is fast,
+efficient, and scalable; although current \ac{GPU} cards limit the
+size of the simulations due to memory constraints.
+Nevertheless, our model processes a $40\times40$ input video at
+$20$ frames per second in real-time,which corresponds to a total
+of $239,040$ neurons in the simulated \ac{V1}, \ac{MT}, 
+and \ac{LIP} areas, at $20$ frames per second using a single 
+\ac{GPU}, which enables the
+potential use of our software in real-time applications ranging
+from robot vision to autonomous driving.
+
+Third, our implementation might be of particular interest to
+the neuromorphic modeling community, as the present neuron
+model, synapse model, and \ac{AER} are compatible with recent
+neuromorphic hardware~\citep{Srinivasa2012}.
+Thus our algorithm could be used as a neural controller in
+neuromorphic and neurorobotics applications. Future work
+could be directed toward creating an interface by which networks
+can be automatically exported onto neuromorphic
+hardware.
+
+Fourth, because of the modular code structure, our implementation
+can be readily extended to include, for example,
+higher-order visual areas or biologically plausible synaptic
+learning rules such as \ac{STDP}. Thus our implementation may
+facilitate the testing of hypotheses and the study of the temporal
+dynamics that govern visual motion processes in area
+\ac{MT}, which might prove harder to study using previous (rate-based)
+model incarnations.
+Lastly, the network was constructed using CARLsim 
+(see Chapter~\ref{ch:SNN}), with all source code for the simulator,
+the spiking network, and analysis scripts publicly available.
+As such it is the next step towards our goal
+of making efficient simulations of large-scale spiking networks
+available to a wide range of researchers, without the
+need of a cluster or supercomputer.
+

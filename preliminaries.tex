@@ -1,0 +1,242 @@
+\thesistitle{Cortical Neural Network Models of Visual Motion Perception for Decision-Making and Reactive Navigation}
+
+\degreename{Doctor of Philosophy}
+
+% Use the wording given in the official list of degrees awarded by UCI:
+% http://www.rgs.uci.edu/grad/academic/degrees_offered.htm
+\degreefield{Computer Science}
+
+% Your name as it appears on official UCI records.
+\authorname{Michael Beyeler}
+
+% Use the full name of each committee member.
+\committeechairone{Professor Jeffrey L. Krichmar}
+\committeechairtwo{Professor Nikil D. Dutt}
+\othercommitteemembers
+{
+  Professor Charless C. Fowlkes
+}
+
+\degreeyear{2016}
+
+\copyrightdeclaration
+{
+  {\copyright} {\Degreeyear} \Authorname
+}
+
+% If you have previously published parts of your manuscript, you must list the
+% copyright holders; see Section 3.2 of the UCI Thesis and Dissertation Manual.
+% Otherwise, this section may be omitted.
+\prepublishedcopyrightdeclaration
+{
+	
+	Chapter \ref{ch:SNN} {\copyright} 2014, 2015 IEEE \\
+    Portion of Chapter \ref{ch:ME} {\copyright} 2014 Springer \\
+    Portion of Chapter \ref{ch:MT} {\copyright} 2014 Springer \\
+    Chapter \ref{ch:ABR} {\copyright} 2015 IEEE \\
+	All other materials {\copyright} {\Degreeyear} \Authorname
+}
+
+% The dedication page is optional.
+% \dedications
+% {
+%   (Optional dedication page)
+  
+%   To ...
+% }
+
+\acknowledgments
+{
+	First and foremost I would like to thank my PhD advisors, Profs.
+    Jeff Krichmar and Nik Dutt.
+    It was Jeff who gave me the chance to conduct my Master's Thesis in his lab
+    back when I first dared to cross the pond and move to Irvine,
+    and it was Nik who subsequently stepped
+    in and helped us revive the ``Computational Neuroscience'' track in the
+    Computer Science department at UCI.
+    Both of them were excellent mentors demonstrating perpetual energy, 
+    expertise, and vision in research.
+    I am thankful for everything they have taught me,
+    for their patience and kindness,
+    and for the freedom they gave me to explore new ideas.
+    I also thank Prof. Charless Fowlkes for his efforts in pre-reviewing my
+    thesis work and challenging me to approach my ideas from different angles
+    and explain my work in different ways.
+    
+    A big thanks must go to my labmates and co-authors of the original publications.
+    Nicolas Oros: thank you for teaching me how to break big projects into
+    feasible steps, and for developing the Android Based Robotics (ABR) platform.
+    Ting-Shuo Chou: thank you for your \emph{joie de vivre}, 
+    your endless programming knowledge, 
+    and for teaching me how to say ``piece of cake'' in Mandarin.
+    Kristofor Carlson: thank you for being there and saying things no one expects,
+    for the 2AM writing sessions, for Science Fridays, 
+    and of course your (un)disputable soccer expertise.
+    Micah Richert, whose legacy most of my work is based on: thank you for your
+    efforts developing an early version of CARLsim,
+    for steering me towards studying visual motion perception,
+    and for linking STDP to NMF. Your work was a great inspiration to me.
+    
+    I must also thank my funding sources, without whom this research would not
+    have been possible: the National Science Foundation (NSF),
+    the Defense Advanced Research Projects Agency (DARPA),
+    Qualcomm Technologies Inc., Intel Corporation, 
+    Northrop Grumman Aerospace Systems,
+    and the Swiss-American Society (SFUSA).
+    
+    Finally, I would like to thank my fianc\'{e}e, family, and friends 
+    for all their love and support,
+    and for keeping me sane throughout these years.
+}
+
+
+% Some custom commands for your list of publications and software.
+\newcommand{\mypubentry}[3]{
+  \begin{tabular*}{1\textwidth}{@{\extracolsep{\fill}}p{4.5in}r}
+    \textbf{#1} & \textbf{#2} \\ 
+    \multicolumn{2}{@{\extracolsep{\fill}}p{.95\textwidth}}{#3}\vspace{6pt} \\
+  \end{tabular*}
+}
+\newcommand{\mysoftentry}[3]{
+  \begin{tabular*}{1\textwidth}{@{\extracolsep{\fill}}lr}
+    \textbf{#1} & \url{#2} \\
+    \multicolumn{2}{@{\extracolsep{\fill}}p{.95\textwidth}}
+    {\emph{#3}}\vspace{-6pt} \\
+  \end{tabular*}
+}
+
+% Include, at minimum, a listing of your degrees and educational
+% achievements with dates and the school where the degrees were
+% earned. This should include the degree currently being
+% attained. Other than that it's mostly up to you what to include here
+% and how to format it, below is just an example.
+\curriculumvitae
+{
+
+\textbf{EDUCATION}
+  
+  \begin{tabular*}{1\textwidth}{@{\extracolsep{\fill}}lr}
+    \textbf{Doctor of Philosophy in Computer Science} & \textbf{2016} \\
+    \vspace{6pt}
+    University of California, Irvine & \emph{Irvine, CA} \\
+    \textbf{Master of Science in Biomedical Engineering} & \textbf{2011} \\
+    \vspace{6pt}
+    ETH Zurich & \emph{Zurich, Switzerland} \\
+    \textbf{Bachelor of Science in Electrical Engineering} & \textbf{2009} \\
+    \vspace{6pt}
+    ETH Zurich & \emph{Zurich, Switzerland} \\
+  \end{tabular*}
+
+\pagebreak
+
+\vspace{12pt}
+\textbf{RESEARCH EXPERIENCE}
+
+  \begin{tabular*}{1\textwidth}{@{\extracolsep{\fill}}lr}
+    \textbf{Graduate Student Researcher} & \textbf{2012--2016} \\
+    \vspace{6pt}
+    University of California, Irvine & \emph{Irvine, CA} \\
+    \textbf{Summer Research Intern} & \textbf{2015} \\
+    \vspace{6pt}
+    IBM Research - Almaden & \emph{San Jose, CA} \\
+    \textbf{Summer Research Intern} & \textbf{2013} \\
+    \vspace{6pt}
+    Fraunhofer IPA & \emph{Stuttgart, Germany} \\
+    \textbf{Junior Specialist} & \textbf{2011--2012} \\
+    \vspace{6pt}
+    University of California, Irvine & \emph{Irvine, CA} \\
+  \end{tabular*}
+
+\pagebreak
+
+\vspace{12pt}
+\textbf{TEACHING EXPERIENCE}
+
+  \begin{tabular*}{1\textwidth}{@{\extracolsep{\fill}}lr}
+    \textbf{Teaching Assistant} & \textbf{2013--2015} \\
+    \vspace{6pt}
+    University of California, Irvine & \emph{Irvine, CA} \\
+    \textbf{Tutorial Assistant} & \textbf{2009--2010} \\
+    \vspace{6pt}
+    ETH Zurich & \emph{Zurich, Switzerland} \\
+  \end{tabular*}
+
+\pagebreak
+
+\textbf{BOOKS}
+
+  \mypubentry{OpenCV with Python Blueprints: Design and develop advanced computer vision projects using OpenCV with Python.}{2015}{M. Beyeler. Packt Publishing Ltd., London, England, 230 pages, ISBN 978-178528269-0.}
+
+\textbf{REFEREED JOURNAL PUBLICATIONS}
+
+  \mypubentry{3D visual response properties of MSTd emerge from an efficient, sparse population code}{under review}{M. Beyeler, N. Dutt, and J. Krichmar.}
+  \mypubentry{A GPU-accelerated cortical neural network model for visually guided robot navigation}{2015}{M. Beyeler, N. Oros, N. Dutt, and J. Krichmar. Neural Networks 72: 75--87.}
+  \mypubentry{Efficient spiking neural network model of pattern motion selectivity in visual cortex}{2014}{M. Beyeler, M. Richert, N. Dutt, and J. Krichmar. Neuroinformatics: 1--20.}
+  \mypubentry{Categorization and decision-making in a neurobiologically plausible spiking neural network using a STDP-like learning rule}{2013}{M. Beyeler, N. Dutt, and J. Krichmar. Neural Networks 48C: 109--124.}
+
+% \vspace{12pt}
+\textbf{REFEREED CONFERENCE PUBLICATIONS}
+
+  \mypubentry{CARLsim 3: A user-friendly and highly optimized library for the creation of neurobiologically detailed spiking neural networks}{2015}{M. Beyeler*, T.-S. Chou*, K.~D. Carlson*, N. Dutt, and J. Krichmar (*co-first authors). IEEE International Joint Conference on Neural Networks (IJCNN).}
+  \mypubentry{Vision-based robust road lane detection in urban environments}{2014}{M. Beyeler, F. Mirus, and A. Verl. IEEE International Conference on Robotics and Automation (ICRA).}
+  \mypubentry{Exploring olfactory sensory networks: simulations and hardware emulation}{2010}{M. Beyeler*, F. Stefanini*, H. Proske, C.~G. Galizia, and E. Chicca (*co-first authors). Biomedical Circuits and Systems Conference (BioCAS).}
+
+\pagebreak
+
+\textbf{INVITED PUBLICATIONS}
+
+  \mypubentry{GPGPU accelerated simulation and parameter tuning for neuromorphic applications}{2014}{K.~D. Carlson, M. Beyeler, N. Dutt, and J. Krichmar. 19th Asia and South Pacific Design Automation Conference (ASP-DAC).}
+
+\vspace{3pt}
+\textbf{SOFTWARE}
+
+  \mysoftentry{CARLsim 3}{http://www.socsci.uci.edu/~jkrichma/CARLsim/index.html}{Efficient, easy-to-use, GPU-accelerated library for simulating large-scale SNN models with a high degree of biological detail.}
+  
+  \vspace{3pt}
+  
+  \mysoftentry{Motion Energy}{https://github.com/UCI-CARL/MotionEnergy}{CUDA implementation of the Motion Energy model (Simoncelli \& Heeger, 1998).}
+  
+%   \vspace{3pt}
+  
+  \mysoftentry{VisualStimulus}{https://github.com/UCI-CARL/VisualStimulusToolbox}{Matlab toolbox for generating, storing, and plotting 2D visual stimuli related to neuroscience such as sinusoidal gratings, plaids, random dot fields, and noise.}
+
+}
+
+% The abstract should not be over 350 words, although that's
+% supposedly somewhat of a soft constraint.
+\thesisabstract
+{
+Animals use vision to traverse novel cluttered environments with apparent ease.
+Evidence suggests that the mammalian brain integrates visual motion cues across
+a number of remote but interconnected brain regions that make up a visual motion
+pathway. Although much is known about the neural circuitry that is concerned with
+motion perception in the \acf{V1} and the \acf{MT}, little is known about 
+how relevant perceptual variables might be represented in higher-order areas of 
+the motion pathway, and how neural activity in these areas might relate to the
+behavioral dynamics of locomotion. The main goal of this dissertation is to
+investigate the computational principles that the mammalian brain might be using
+to organize low-level motion signals into distributed representations of 
+perceptual variables, and how neural activity in the motion pathway might
+mediate behavior in reactive navigation tasks. 
+I first investigated how the aperture problem, a fundamental conceptual challenge
+encountered by all low-level motion systems, can be solved in a spiking neural
+network model of \ac{V1} and \ac{MT} (consisting of $153,216$ neurons and $40$ 
+million synapses), relying solely on dynamics and properties gleaned from known
+electrophysiological and neuroanatomical evidence, and how this neural activity
+might influence perceptual decision-making.
+Second, when used with a physical robot performing a reactive navigation task 
+in the real world, I found that the model produced behavioral trajectories that
+closely matched human psychophysics data. 
+Essential to the success of these studies were software implementations that 
+could execute in real time, which are freely and openly available to the 
+community. 
+Third, using ideas from the efficient-coding and free-energy principles, I
+demonstrated that a variety of response properties of neurons in \acf{MSTd}
+area could be derived from \ac{MT}-like input features. This finding suggests 
+that response properties such as 3D translation and rotation selectivity, 
+complex motion perception, and heading selectivity might simply be a by-product 
+of \ac{MSTd} neurons performing dimensionality reduction on their inputs. 
+The hope is that these studies will not only further our understanding of how 
+the brain works, but also lead to novel algorithms and brain-inspired robots
+capable of outperforming current artificial systems.
+}

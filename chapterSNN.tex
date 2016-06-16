@@ -1,0 +1,840 @@
+\chapter{CARLsim: A Large-Scale Spiking Neural Network Simulator}
+\label{ch:SNN}
+
+\section{Introduction}
+\label{sec:SNN|introduction}
+\acf{SNN} models play an important role in understanding brain
+function~\citep{Maass1997,Rieke1999,Eliasmith2012} and in designing neuromorphic devices with
+the energy efficiency, computational power, and fault-tolerance of the
+brain~\citep{Boahen2006,Cassidy2014,Khan2008,Minkovich2014,Schemmel2010}.
+These models represent a compromise between execution time and biological
+fidelity by capturing essential aspects of neural communication, such as
+spike dynamics, synaptic conductance, and plasticity, while foregoing
+computationally expensive descriptions of spatial voltage propagation found
+in compartmental models~\citep{Koch2004,Izhikevich2007}.
+
+However, developing efficient simulation environments for \ac{SNN} models is
+challenging due to the required memory to store the neuronal/synaptic state
+variables and the time needed to solve the dynamical equations describing
+these models.
+A number of simulators are already available to the public
+(for an overview see \cite{Brette2007,Beyeler2015a}),
+each providing their own unique qualities and trade-offs based on the 
+employed abstraction level and supported computer hardware.
+Given the considerable potential for parallelization of artificial neural
+networks~\citep{Nordstrom1992}, it is not surprising that most simulators
+today offer implementations on parallel architectures,
+such as computer clusters or \acp{GPU}.
+However, in order to be of practical use to the computational modeling
+community, an SNN simulator should not only be fast,
+but also freely available,
+capable of running on affordable hardware,
+have a user-friendly interface,
+include complete documentation,
+and provide tools to easily design, construct, and analyze \ac{SNN} models.
+
+To meet these challenges, we have developed CARLsim 3, a user-friendly,
+\ac{GPU}-accelerated \ac{SNN} simulation framework written in C/C++ that is capable of
+simulating large-scale neural models without sacrificing biological detail.
+Due to its efficient \ac{GPU} implementation, CARLsim is useful for designing
+large-scale SNN models that have real-time constraints (e.g., interacting
+with neuromorphic sensors or controlling neurorobotics platforms).
+To promote its use among the computational neuroscience and neuromorphic
+engineering communities, CARLsim is provided as an open-source package,
+which can be freely obtained from: \url{http://www.socsci.uci.edu/~jkrichma/CARLsim}.
+
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\textwidth]{snn_framework}
+  \caption{CARLsim: A neuromorphic framework for constructing functional
+  \ac{SNN} models.}
+  \label{fig:SNN|framework}
+\end{figure}
+
+\section{CARLsim}
+CARLsim is a C/C++ based \ac{SNN} simulator that allows execution of networks
+of Izhikevich spiking neurons~\citep{Izhikevich2003} with realistic
+synaptic dynamics on both generic x86 \acp{CPU} and standard 
+\ac{CUDA}-enabled \acp{GPU}.
+CARLsim can be understood as a computational framework
+for the exploration of experimental data, functional applications, and
+theoretical models of brain function,
+with applications to theoretical neuroscience, real-time computing,
+and neuromorphic engineering (Fig.~\ref{fig:SNN|framework}).
+
+The simulator was first introduced in $2009$ (now referred to
+as CARLsim 1), where it demonstrated near real-time
+performance for $10^5$ spiking neurons on a single NVIDIA
+GTX 280 \ac{GPU}~\citep{Nageswaran2009}.
+CARLsim 2 added basic support for
+synaptic conductances, \ac{STDP}, and \ac{STP}~\citep{Richert2011}.
+The most recent release, CARLsim 3, greatly expands the functionality of the
+simulator by adding a number of features that enable and
+simplify the creation, tuning, and simulation of complex
+networks with spatial structure~\citep{Beyeler2015a}.
+These features include: i)
+real-time and offline data analysis tools, ii) a more complete
+\ac{STDP} implementation that includes dopaminergic neuromodulation,
+and iii) an automated parameter tuning interface.
+In addition, several software engineering techniques and more
+complete documentation were introduced in the latest release
+to ensure the integrity of the current code base and to lay the
+groundwork for the success of future releases. The following
+subsections will explain these achievements in detail.
+
+
+\subsection{CARLsim User Interface: General Workflow}
+\label{sec:SNN|API}
+The workflow of a typical CARLsim 3 simulation is organized
+into three distinct, consecutive states (see Fig.~\ref{fig:SNN|workflow}):
+the configuration state (\texttt{CONFIG}),
+the set up state (\texttt{SETUP}), and the
+run state (\texttt{RUN}). User functions in the C++ \ac{API} are grouped
+according to these stages, which streamline the process and
+prevent race conditions. State transitions are handled by
+special user methods such as
+\texttt{CARLsim::setupNetwork} and \texttt{CARLsim::runNetwork}.
+The basic workflow is outlined in
+Listings~\ref{lst:SNN|simpleConfig} -- \ref{lst:SNN|simpleRun},
+which are explained in detail below.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\textwidth]{snn_state}
+  \caption{CARLsim state diagram.
+  The user specifies neuronal and network details in the
+  \texttt{CONFIG} state.
+  Calling \texttt{setupNetwork} moves the simulation to the \texttt{SETUP}
+  state, where data monitors can be set.
+  Calling \texttt{runNetwork} moves the simulation to the \texttt{RUN}
+  state, where input stimuli are set and the simulation is executed.
+  Data can be analyzed either on-line (e.g., by accessing collected spike
+  data or by taking a snapshot of the current synaptic weights),
+  or off-line via the \acf{OAT}.}
+  \label{fig:SNN|workflow}
+\end{figure}
+
+
+\subsubsection{The Configuration State}
+\label{sec:SNN|API|CONFIG}
+
+The first step in using CARLsim 3 (\texttt{libCARLsim}) is to import the
+library and instantiate the main simulation object,
+which prepares the simulation for execution in either \texttt{CPU\_MODE}
+or \texttt{GPU\_MODE}.
+From then on, the simulation is in \texttt{CONFIG} state,
+allowing the properties of the neural network to be specified.
+
+Similar to PyNN~\citep{Davison2009} and many other simulation
+environments, CARLsim uses groups of neurons and
+connections as an abstraction to aid defining synaptic
+connectivity. Different groups of neurons can be created from a
+one-dimensional array to a three-dimensional grid via
+\texttt{CARLsim::createSpikeGeneratorGroup}
+or \texttt{CARLsim::createGroup}, and
+connections can be specified depending on the relative grid
+placement of neurons via \texttt{CARLsim::connect}.
+This allows for the creation of networks with complex spatial structure.
+
+\begin{listing}[h]
+\caption{CARLsim CONFIG state}
+\vspace{-0.7cm}
+\inputminted{c++}{listings/snn_simple_config.cpp}
+\label{lst:SNN|simpleConfig}
+\end{listing}
+
+An example network is being configured in Listing~\ref{lst:SNN|simpleConfig}.
+Here, the CARLsim object is instantiated (line 4),
+two neuronal groups are created (lines 8--10),
+a connection between these two groups is established (lines 13--14)
+as well as subjected to STDP (lines 17--18),
+and all synapses are defined to be conductance-based (line 21).
+
+CARLsim currently supports Izhikevich spiking neurons~\citep{Izhikevich2003} 
+with either current-based or conductance-based synapses,
+but more neuron types are planned for the future.
+In the above example, two groups of $500$ Izhikevich neurons each
+are arranged on a $10\times10\times5$ three-dimensional grid
+(lines 7--9).
+The keyword \texttt{EXCITATORY\_NEURON} denotes that all neurons
+in these groups have glutamatergic synapses,
+although it is also possible to create neurons with
+GABAergic synapses (\texttt{INHIBITORY\_NEURON})
+or dopaminergic synapses (\texttt{DOPAMINERGIC\_NEURON}).
+In order to refer to these groups in
+later method calls, the methods \texttt{createSpikeGeneratorGroup} and
+\texttt{createGroup} return a group
+ID, stored in \texttt{gIn} and \texttt{gOut}, respectively.
+Line 10 specifies the Izhikevich parameters of group \texttt{gOut},
+making these neurons of class 1 excitability (i.e., regular spiking neurons),
+where $0.02$, $0.2$, $-65.0$, and $8.0$ correspond respectively to
+the $a$, $b$, $c$, and $d$ parameters of the Izhikevich neuron.
+
+The two groups, \texttt{gIn} and \texttt{gOut}, are connected topographically
+using a Gaussian connection profile (lines 13--14), which connects 
+neurons based on their relative distance in 1D, 2D, or 3D space as defined
+by the \texttt{Grid3D} struct (line 7).
+The spatial extent of these connections is given by the \texttt{RadiusRF}
+struct (line 14), which allows the receptive field of each neuron to be
+specified in 1D, 2D, or 3D space.
+The connection pattern in the above example script
+has a synaptic weight of value $0.01$,
+\SI{10}{\percent}
+connection probability, a synaptic delay uniformly distributed
+between \SI{1}{\milli\second} and \SI{20}{\milli\second},
+and plastic synapses (\texttt{SYN\_FIXED}) whose weights can range
+between $0$ and $0.01$.
+If one is not satisfied with the built-in connection types
+(\texttt{"one-to-one"}, \texttt{"full"}, \texttt{"random"}, and 
+\texttt{"gaussian"}), a callback mechanism is available for
+arbitrary, user-specified connectivity.
+
+CARLsim 3 allows users to choose from a number of
+synaptic plasticity mechanisms. These include standard
+equations for \ac{STP}
+\citep{Tsodyks1998,Senn2001},
+various forms of additive nearest-neighbor \ac{STDP}
+\citep{IzhikevichDesai2003},
+and homeostatic plasticity in the form of synaptic scaling
+\citep{Carlson2013}.
+\ac{STDP} is a paradigm that
+modulates the weight of synapses according to their degree of
+causality.
+In CARLsim, \ac{STDP} is specified post-synaptically,
+and can either apply to all glutamatergic synapses
+(i.e., where the pre-synaptic group is excitatory; E-\ac{STDP})
+or all GABAergic synapses
+(i.e., where the pre-synaptic group is inhibitory; I-\ac{STDP}).
+In the present example, E-\ac{STDP} is enabled on group \texttt{gOut},
+and the shape of the \ac{STDP} curve is set to the standard exponential
+curve (see Section~\ref{sec:BKG|plasticity}).
+
+For a selective list of other available function calls in \texttt{CONFIG} 
+state, please refer to Fig.~\ref{fig:SNN|workflow}.
+
+
+\subsubsection{The Set Up State}
+\label{sec:SNN|API|SETUP}
+
+Once the network has been specified, \texttt{CARLsim::setupNetwork}
+optimizes the network state for the chosen back-end (\ac{CPU} or \ac{GPU})
+and moves the simulation into \texttt{SETUP} state (see 
+Fig.~\ref{fig:SNN|workflow}).
+In this state, monitors can be set to record variables of interest
+(e.g., spikes, weights, state variables).
+
+An example is shown in Listing~\ref{lst:SNN|simpleSetup},
+where a \texttt{SpikeMonitor} is set to record spikes for the duration
+of the simulation and dump the data to a \texttt{"DEFAULT"} file
+location (line 3).
+Analogously, a \texttt{ConnectionMonitor} will track synaptic weight
+changes over the time course of the simulation and dump the data to
+file (line 4).
+The default file location is given by the name of the group
+(as specified on lines 8 and 9 in Listing~\ref{lst:SNN|simpleConfig}),
+which is a means to easily find relevant files during off-line
+analysis (see Section~\ref{sec:SNN|OAT}).
+
+\begin{listing}[h]
+\caption{CARLsim SETUP state}
+\vspace{-0.7cm}
+\inputminted{c++}{listings/snn_simple_setup.cpp}
+\label{lst:SNN|simpleSetup}
+\end{listing}
+
+New in CARLsim 3 is a means to access recorded variables at run-time,
+without the computational overhead of writing data to disk.
+This is achieved by means of a \texttt{SpikeMonitor} handle that is
+returned by \texttt{CARLsim::setSpikeMonitor}.
+This handle then allows read access of collected data during the
+\texttt{RUN} state.
+
+For a selective list of other available function calls in \texttt{SETUP} 
+state, please refer to Fig.~\ref{fig:SNN|workflow}.
+
+
+
+\subsubsection{The Run State}
+\label{sec:SNN|API|RUN}
+
+The first call to \texttt{CARLsim::runNetwork} will take the simulation
+into \texttt{RUN} state.
+In this state, input stimuli can be specified,
+and the simulation can be repeatedly run (or ``stepped'') for
+an arbitrary number of milliseconds.
+
+Input can be generated via current injection or spike
+injection (the latter using Poisson spike generators, or a
+callback mechanism to specify arbitrary spike trains).
+CARLsim also provides plug-in code to generate Poisson spike trains from
+animated visual stimuli such as sinusoidal gratings, plaids, and
+random dot fields created via the \texttt{VisualStimulus} 
+toolbox\footnote{\texttt{VisualStimulus} is a MATLAB toolbox for generating, 
+storing, and plotting 2D visual stimuli related to neuroscience.
+The toolbox was created during CARLsim development,
+but is also available as a standalone download from:
+\url{https://github.com/UCI-CARL/VisualStimulusToolbox}.}.
+
+In Listing~\ref{lst:SNN|simpleRun}, input is generated via a Poisson
+spike generator object, \texttt{poissonIn} (line 3), which is associated
+with the group \texttt{gIn} (line 4).
+The \texttt{PoissonRate} object will then generate Poisson spike trains
+from a specified mean firing rate
+(i.e., given by the $\lambda$ parameter of the Poisson process), which
+increases as a function of simulation time (line 9).
+The network is run for a total of ten trials, each of which has a
+\SI{1}{\second} duration (line 14).
+
+\begin{listing}[h]
+\caption{CARLsim RUN state}
+\vspace{-0.7cm}
+\inputminted{c++}{listings/snn_simple_run.cpp}
+\label{lst:SNN|simpleRun}
+\end{listing}
+
+In the above listing, the \texttt{SpikeMonitor} handle from the
+\texttt{SETUP} state is used to selectively record spike events
+of the group \texttt{gOut}.
+This is achieved by surrounding \texttt{CARLsim::runNetwork}
+with calls to \texttt{SpikeMonitor::startRecording} and
+\texttt{SpikeMonitor::stopRecording}.
+Public members of the \texttt{SpikeMonitor} class can then be
+accessed to either print a summary of the recorded network
+activity (line 18) or retrieve sophisticated activity metrics,
+such as the population's mean firing rate or the percentage
+of neurons whose mean firing rates range between \SI{0}{\hertz}
+and \SI{5}{\hertz} (arbitrary range; line 21).
+CARLsim provides a wide range of these metrics,
+which become particularly useful when the simulation is used to
+search large parameter spaces using the built-in
+parameter tuning interface~\citep{Beyeler2015a,Carlson2014b}.
+
+In addition to the real-time monitors, CARLsim 3 provides a
+versatile \ac{OAT} written in MATLAB (see Section~\ref{sec:SNN|OAT}),
+which allows users to quickly
+visualize and easily analyze their network simulations.
+
+For a selective list of other available function calls in \texttt{RUN} 
+state, please refer to Fig.~\ref{fig:SNN|workflow}.
+
+
+
+
+\subsection{CARLsim Kernel: Simulation Engine}
+\label{ch:SNN|kernel}
+An important feature of CARLsim is the ability to run spiking
+networks not only on \acp{CPU}, but also on off-the-shelf NVIDIA
+\acp{GPU} using the \ac{CUDA} framework.
+
+The basic structure of the CUDA GPU architecture is shown in
+Fig.~\ref{fig:SNN|CUDA}.
+Each \ac{GPU} consists of multiple \acp{SM}
+and a global memory accessible by all \acp{SM}.
+Each \ac{SM} is built from multiple floating-point scalar processors,
+a cache/shared memory, and one or more special functions units,
+which execute transcendental functions such as sine,
+cosine, and square root operations. \ac{CUDA} groups parallel
+threads into ``warps'', where the number of threads per warp
+varies depending on the specific \ac{CUDA} architecture.
+Each \ac{SM} also has at least one warp scheduler that is built to maximize
+the number of threads running concurrently. The warp
+scheduler monitors threads within a warp and automatically
+switches to another warp when a thread makes a
+time-consuming memory access.
+
+The \ac{GPU} implementation of CARLsim was written to
+optimize four main performance metrics: parallelism, memory
+bandwidth, memory usage, and thread divergence~\citep{Nageswaran2009}.
+The simulation is broken into steps that update neuronal state
+variables in parallel (N-parallelism), and steps that update
+synaptic state variables in parallel (S-parallelism). Sparse
+representation techniques for spiking events and neuronal
+firing decrease both memory and memory bandwidth usage.
+Thread/warp divergence occurs when a thread
+executes a different operation than other threads in a warp
+causing the other threads to wait for its completion. CARLsim
+prevents thread/warp divergence by buffering data until all
+threads are ready to execute the same operation.
+At the same time, this technique enables efficient run-time access
+of recorded variables (e.g., via SpikeMonitor) that are stored on
+the \ac{GPU}~\citep{Beyeler2015a}.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.7\textwidth]{snn_cuda}
+  \caption{Simplified diagram of NVIDIA \ac{CUDA} \ac{GPU} architecture.}
+  \label{fig:SNN|CUDA}
+\end{figure}
+
+The CARLsim 3 kernel introduces a number of software
+engineering techniques to assure the integrity of the current
+code base and to enable successful growth of the project in the
+future~\citep{Beyeler2015a}.
+For example, the pointer to implementation
+idiom~\citep[Chapter~5: Hiding the Implementation]{Eckel2000}
+is used to programmatically separate user interface from
+implementation, which will simplify the addition of different
+front-ends and back-ends in the future.
+Regression testing~\citep{Kolawa2007}, via
+Google Test\footnote{Google's C++ test framework can be obtained from: \url{https://github.com/google/googletest}.},
+is used to ensure that the development of new
+functionality does not compromise the existing code base, and
+new features are validated using both functional and unit testing.
+The full test suite is visible to the user for automatic quality
+assurance after installation.
+
+CARLsim development was mostly based on the M2090
+Tesla \ac{GPU} that utilizes the \ac{CUDA} Fermi architecture.
+The Tesla M2090 has \SI{6}{\giga\byte} of global memory, $512$ cores (each
+operating at \SI{1.30}{\giga\hertz}) grouped into $16$ \acp{SM}, and a single precision compute power of $1331.2$ GFLOPS.
+Each \ac{SM} is composed of $32$ SPs, $16$ load/store units, 
+$4$ special function units, and two warp 
+schedulers~\citep{NVIDIAFermi2009}.
+However, CARLsim is compatible with any NVIDIA \ac{GPU} that 
+supports either the Fermi, Kepler, or Maxwell versions of the
+\ac{CUDA} architecture.
+In addition, the software was tested on a variety of platforms
+such as Windows 7 and 8, Linux (Ubuntu 12.04, 12.10, 13.04, 13.10, and 14.04; 
+CentOS 6; Arch Linux; OpenSUSE 13.1), and Mac OS X
+to ensure maximal user support.
+
+
+
+\subsection{MATLAB Offline Analysis Toolbox (OAT)}
+\label{sec:SNN|OAT}
+
+In addition to real-time monitors, CARLsim provides a versatile
+\acf{OAT} written in MATLAB for the visualization and analysis
+of neuronal, synaptic, and network information.
+The \ac{OAT} is designed to produce meaningful plots with minimal
+user input, by operating on binary files that were
+created during CARLsim simulations.
+
+The \ac{OAT} is organized into a hierarchy of classes,
+deriving either from a \texttt{Reader} base class to operate
+on raw binary files or from a \texttt{Monitor} base class
+to visualize data.
+Reader objects include a \texttt{SimulationReader} class
+for reading simulation configuration files,
+\texttt{SpikeReader} for reading \ac{AER} spike files,
+and \texttt{ConnectionReader} for reading synaptic weight files.
+Monitor objects utilize reader objects to visualize network
+activity, either on a per-group basis via \texttt{GroupMonitor},
+or for every group in the network via \texttt{NetworkMonitor}.
+Similarly, synaptic connections can be visualized and analyzed
+via \texttt{ConnectionMonitor}.
+
+\begin{listing}[h]
+\caption{Visualizing network activity using the \ac{OAT}.}
+\vspace{-0.7cm}
+\inputminted{matlab}{listings/snn_oat.m}
+\label{lst:SNN|demoOAT}
+\end{listing}
+
+The easiest way to visualize network activity after running
+a CARLsim simulation is illustrated in
+Listing~\ref{lst:SNN|demoOAT}.
+In three simple lines of code, the \ac{OAT} environment is
+initialized by adding relevant directories to the MATLAB
+search path (line 1),
+a \texttt{NetworkMonitor} object is created and pointed to
+\texttt{../results/sim\_carl\_logo.dat}, a file automatically
+generated by running a CARLsim network with name ``carl\_logo'' (line 2),
+and network activity for every group is visualized in a 
+way that best suits both group size and simulation duration (line 3).
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\textwidth]{snn_oat_carl}
+  \caption{
+  Visualizing network activity with the \texttt{NetworkMonitor} object
+  of the \ac{OAT}.
+  A $200\times200$ input group is connected with a Gaussian
+  connection profile to a $100\times100$ output group,
+  effectively implementing a 
+  blur and subsampling step of the Gaussian image pyramid.
+  Each pixel in the heatmap corresponds to the mean firing rate of a
+  single neuron recorded over a \SI{1}{\second} duration
+  (the hotter the color, the higher the activity).
+  Plots can be retrieved by the user with only three lines of
+  MATLAB code (see Listing~\ref{lst:SNN|demoOAT}).}
+  \label{fig:SNN|OAT|carl}
+\end{figure}
+
+An example output is shown in Fig.~\ref{fig:SNN|OAT|carl}
+for a network consisting of two groups (\texttt{"input"}
+and \texttt{"output"})
+connected with a Gaussian connection profile,
+with neurons arranged on a $200\times200$ and $100\times100$
+grid, respectively.
+Because in this example neurons are arranged on a 2D grid, the
+\texttt{NetworkMonitor} object decided to visualize neuronal activity
+as 2D heatmap, where every pixel corresponds to the mean firing rate
+of a particular neuron
+(the hotter the color, the higher the activity).
+
+Plots can be easily customized by passing optional arguments to the
+\texttt{plot} method of the \texttt{NetworkMonitor} class, such as
+by specifying the plot type or the binning window.
+A single-line command is available to store the frame-by-frame
+animation of network activity to a movie file.
+Similar functionality is provided on a per-group basis via the
+\texttt{GroupMonitor} object.
+
+The \ac{OAT} provides a number of different ways to visualize
+data, as illustrated in Fig.~\ref{fig:SNN|OAT|types}.
+Here, a grayscale movie of a sinusoidal grating drifting in an up-right
+direction was generated using the \texttt{VisualStimulus} toolbox (left),
+and served as input to a network of directionally selective neurons,
+akin to neurons in the primary visual cortex
+(see Chapter~\ref{ch:ME}).
+The resulting network activity can be visualized either as a heat map
+(top), a flow field, a polar plot, or a raster plot (bottom row),
+making it easy for the user to visually inspect and verify arbitrarily
+complex networks created with CARLsim.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\textwidth]{snn_oat_types}
+  \caption{Supported \ac{OAT} plot types include heat maps, flow fields,
+  polar plots, and raster plots.
+  Shown is the activity of a network of directionally selective neurons
+  in response to a drifting sinusoidal grating (left).}
+  \label{fig:SNN|OAT|types}
+\end{figure}
+
+
+
+\section{CARLsim Performance}
+
+In order to demonstrate the efficiency and scalability of
+CARLsim 3, we ran simulations consisting of various sized
+\acp{SNN} and measured their execution time~\citep{Beyeler2015a}.
+\ac{GPU} simulations were run on a single NVIDIA GTX $780$
+(\SI{3}{\giga\byte} of memory)
+using \ac{CUDA}, and \ac{CPU} simulations were run on an Intel Core
+i7 \ac{CPU} $920$ operating at \SI{2.67}{\giga\hertz}.
+
+The results of these benchmarks are summarized in
+Fig.~\ref{fig:SNN|performance}.
+Networks consisted of \SI{80}{\percent} excitatory and 
+\SI{20}{\percent} inhibitory neurons, with an additional
+\SI{10}{\percent} of neurons being Poisson
+spike generators that drove network activity. The two neuronal
+populations were randomly connected with a fixed connection
+probability, and E-\ac{STDP} was used to generate sustained
+irregular activity as described by \citet{Vogels2005}.
+The number of synapses per neuron ranged from $100$ to $300$
+connections, and the overall network activity was \SI{\sim10}{\hertz}.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\textwidth]{snn_speed}
+  \caption{\textbf{A}, Ratio of execution time to simulation time versus
+  number of neurons for simulations with $100$, $200$, and $300$
+  synapses per neuron. The dotted line represents simulations running
+  in real time.
+  \textbf{B}, Simulation speedup versus number of neurons. Speedup
+  increases with neuron number. Models with $10^4$ neurons or more have
+  the most impressive speedup.}
+  \label{fig:SNN|performance}
+\end{figure}
+
+\ac{GPU} simulation speed, given as the ratio of \ac{GPU} execution
+time over real-time, is plotted in Fig.~\ref{fig:SNN|performance}A.
+Execution time
+scaled linearly with workload, both in terms of number of
+neurons as well as number of synapses.
+In \citet{Richert2011}
+we reported that networks with $110,000$ neurons and $100$
+synaptic connections per neuron took roughly two seconds of
+clock time for every second of simulation time (CARLsim 2).
+The current release (CARLsim 3) was slightly slower in this
+scenario, taking roughly \SI{2.5}{\second} of clock time for every
+second of simulation time, which is not surprising given the
+large number of additional features in the present release. On
+the other hand, \ac{GPU} mode still significantly outperformed
+\ac{CPU} mode (see Fig.~\ref{fig:SNN|performance}B).
+\ac{GPU} execution time was up to $60$
+times faster than the CPU. This result is due to a combination
+of newer hardware (GTX $780$) as well as code-level
+optimization that allowed the effective use of
+S-parallelism~\citep{Nageswaran2009}
+for new features such as synaptic receptor ratios and different
+shaped \ac{STDP} curves, which are not possible in a single-threaded
+\ac{CPU} simulation. In summary, despite the additional
+features and new programming interface, CARLsim 3 is
+similar in performance to our previous releases and is highly
+optimized for \acp{SNN} on the order of $105$ neurons and $107$
+synapses.
+
+
+
+\section{CARLsim Applications}
+\label{sec:SNN|applications}
+CARLsim has been used to construct large-scale
+simulations of cognitive processes on the order of $10^4 - 10^5$
+neurons and millions of synapses, with examples that include
+models of visual
+processing~\citep{Richert2011,Beyeler2013,Beyeler2014,Beyeler2015b},
+neuromodulation~\citep{Avery2012,Avery2015},
+neural plasticity~\citep{Carlson2013},
+and somatosensory processing~\citep{Chou2015}.
+Although their efficient implementation
+is challenging due to the associated computational cost,
+investigating large-scale models of cortical networks in more
+biological detail is widely regarded as crucial in order to
+understand brain function~\citep{Honey2007}.
+
+One of our recent works~\citep{Beyeler2013} concerned the ability of
+a large-scale spiking neural network model to rapidly
+categorize highly correlated patterns of neural activity such as
+handwritten digits from the MNIST database~\citep{LeCun1998}. Although
+many studies have focused on the design and optimization of
+neural networks to solve visual recognition tasks, most of
+them either lack neurobiologically plausible learning rules or
+decision-making processes. In contrast, our model
+demonstrated how a low-level memory encoding mechanism
+based on synaptic plasticity could be integrated with a
+higher-level decision-making paradigm to perform the visual
+classification task in real-time.
+
+The model consisted of Izhikevich neurons and
+conductance-based synapses for realistic approximation of
+neuronal dynamics, an \ac{STDP}-like synaptic learning rule for
+memory encoding (previously described by \citet{Brader2007}), and an
+accumulator model for memory retrieval and categorization 
+\citep{SmithRatcliff2004}.
+Grayscale input images were fed through a feed-forward
+network consisting of visual cortical areas V1 and V2
+(selective to one of four spatial orientations, in \SI{45}{\degree}
+increments), which then projected to a layer of downstream
+classifier neurons through plastic synapses that implement the
+\ac{STDP}-like learning rule mentioned above. Decision neurons
+were equally divided into ten pools, each of which would
+develop selectivity to one class of input stimuli from the
+MNIST dataset (i.e., one of the ten digits) as a result of
+training. Population responses of these classifier neurons were
+then integrated over time to make a perceptual decision about
+the presented stimulus.
+
+The model constitutes an important proof of concept; that is,
+i) to show how considerably hard problems such as visual
+pattern recognition and perceptual decision-making can be
+solved by general-purpose neurobiologically inspired cortical
+models solely relying on local learning rules that operate on
+the abstraction level of a synapse, and ii) to do it in real-time.
+The network achieved $92\%$ correct classifications on MNIST
+in $100$ rounds of random sub-sampling, which provides a
+conservative performance metric, yet is comparable to other
+\ac{SNN} approaches~\citep{Brader2007,Querlioz2011}.
+Additionally, the model
+correctly predicted both qualitative and quantitative properties
+of reaction time distributions reported in psychophysical
+experiments. The full network, which comprised of $71,026$
+neurons and approximately $133$ million synapses, ran in
+real-time on a single NVIDIA Tesla M2090, which
+demonstrates the efficacy of the CARLsim implementation.
+Moreover, because of the scalability of the approach and its
+neurobiological fidelity, the model can be extended to an
+efficient neuromorphic implementation that supports more
+generalized object recognition and decision-making
+architectures found in the brain.
+
+
+
+\section{Related Work}
+
+Today, a wide variety of simulation environments are
+available to the computational neuroscience community that
+allow for the simulation of \acp{SNN}. Although many simulators
+share similar approaches and features, most have unique
+qualities that distinguish them from the others. In an effort to
+identify and highlight these qualities, we compared a list of
+features provided by a number of other \ac{SNN} simulators with
+CARLsim 3~\citep{Beyeler2015a}.
+We limited this comparison to large-scale \ac{SNN}
+simulators that are most common to CARLsim in that they: i)
+are open source, ii) support the clock-driven and parallelized
+simulation of point neurons, such as LIF, Izhikevich or aIF
+neurons, iii) have conductance-based synapses, and iv)
+provide some form of synaptic plasticity.
+Specifically, we chose (in alphabetical order)
+Brian 2~\citep{Goodman2008},
+GeNN 2~\citep{Nowotny2011},
+NCS 6~\citep{Hoang2013},
+NeMo 0.7~\citep{Fidjeland2009},
+Nengo 2~\citep{Bekolay2014},
+NEST 2.6~\citep{Gewaltig2007} and
+PCSIM 0.5~\citep{Pecevski2009}.
+
+Table~\ref{tbl:SNN|comparison}
+compares different simulation environments with
+respect to features of both biological realism and technical
+capability. A specific feature is indicated as either fully
+implemented (` X `) or absent (blank, `\hspace{0.1in}`). A ` / ` denotes a
+feature that is only partially implemented (e.g.,
+neuromodulation in NEST), requires substantial user efforts to
+implement (e.g., DA-\ac{STDP} in Brian), or is reportedly untested
+(e.g., Windows support for PCSIM). Although we tried to be
+as objective as possible in assigning labels, categorization
+remains subjective in nature. In addition, some of these
+features were not well-documented; but we were still able to
+verify their existence by reading through the actual source
+code and reaching out to the authors for clarification. Overall,
+we believe that the table accurately and fairly reflects the
+development status for each of the listed SNN simulators at
+the time of this publication.
+
+\afterpage{%
+\begin{sidewaystable}[h]
+ \centering
+ \captionof{table}{Feature comparison for some common open-source \ac{SNN} simulators (non-exhaustive list)}
+ \def\arraystretch{1.4}
+ \begin{tabular}{|l|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|}
+ \hline
+  & \multicolumn{3}{|c|}{\parbox[t][1cm][s]{2cm}{Neuron model}}
+  & \multicolumn{3}{|c|}{\parbox[t][1cm][s]{2cm}{Synapse model}}
+  & \multicolumn{3}{|c|}{\parbox[t][1cm][s]{2cm}{Synaptic plasticity}}
+  & \multicolumn{3}{|c|}{Tools}
+  & \multicolumn{3}{|c|}{\parbox[t][1cm][s]{2cm}{Integration methods}}
+  & \multicolumn{3}{|c|}{Front-ends}
+  & \multicolumn{3}{|c|}{Back-ends}
+  & \multicolumn{3}{|c|}{Platforms} \\
+ \hline
+  & \rotatebox[origin=l]{90}{\acf{LIF} \hspace{0.2cm}} 
+  & \rotatebox[origin=l]{90}{Izhikevich 4-param}
+  & \rotatebox[origin=l]{90}{Hodgkin-Huxley}
+  & \rotatebox[origin=l]{90}{\acf{CUBA}}
+  & \rotatebox[origin=l]{90}{\acf{COBA}}
+  & \rotatebox[origin=l]{90}{Neuromodulation}
+  & \rotatebox[origin=l]{90}{\acf{STP}}
+  & \rotatebox[origin=l]{90}{\ac{STDP}}
+  & \rotatebox[origin=l]{90}{Synaptic scaling / homeostasis}
+  & \rotatebox[origin=l]{90}{Parameter tuning}
+  & \rotatebox[origin=l]{90}{Analysis and visualization}
+  & \rotatebox[origin=l]{90}{Regression suite}
+  & \rotatebox[origin=l]{90}{Forward / exponential Euler}
+  & \rotatebox[origin=l]{90}{Exact integration*}
+  & \rotatebox[origin=l]{90}{Runge-Kutta}
+  & \rotatebox[origin=l]{90}{Python / PyNN}
+  & \rotatebox[origin=l]{90}{C / C++}
+  & \rotatebox[origin=l]{90}{Java}
+  & \rotatebox[origin=l]{90}{Single/Multi-threaded}
+  & \rotatebox[origin=l]{90}{distributed}
+  & \rotatebox[origin=l]{90}{\ac{GPU}}
+  & \rotatebox[origin=l]{90}{Linux}
+  & \rotatebox[origin=l]{90}{Mac OS X}
+  & \rotatebox[origin=l]{90}{Windows} \\
+ \hline
+ CARLsim 3
+            &   & X &   & X & X & / & X & X    % LIF - STDP
+            & X & X & X & X & X &   &   &   & X    % Homeo - C/C++
+            &   & / &   & X & X & X & X \\ % Java - Windows
+ \hline
+ CARLsim 2
+            &   & X &   & X & X &   & X & X    % LIF - STDP
+            &   &   & / &   & X &   &   &   & X    % Homeo - C/C++
+            &   & / &   & X & X & X & X \\ % Java - Windows
+ \hline
+ Brian 2    
+            & X & X & X & X & X & / & X & X    % LIF - STDP
+            & X & / & / & X & X & X & X & X & X    % Homeo - C/C++
+            &   & X & / &   & X & X & X \\ % Java - Windows
+ \hline
+ GeNN 2     
+            &   & X & X & X & X & / & / & X    % LIF - STDP
+            & / &   &   &   & X &   &   &   & X    % Homeo - C/C++
+            &   & / &   & X & X & X & X \\ % Java - Windows
+ \hline
+ NCS 6      
+            & X & X & X & X & / &   & X & X    % LIF - STDP
+            &   &   & / &   & X &   &   & X & X    % Homeo - C/C++
+            &   & X & X & X & X &   &   \\ % Java - Windows
+ \hline
+ NeMo 0.7   
+            &   & X &   &   & / & / & X & X    % LIF - STDP
+            &   &   & X & X & X &   &   & X & X    % Homeo - C/C++
+            &   & X &   & X & X & X & X \\ % Java - Windows
+ \hline
+ Nengo 2    
+            & X & X & X & X & X & X & X & /    % LIF - STDP
+            & X & X & X & X &   &   & X & X &      % Homeo - C/C++
+            & X & X &   & X & X & X & X \\ % Java - Windows
+ \hline
+ NEST 2.6   
+            & X & X & X & X & X & / & X & X    % LIF - STDP
+            & X &   &   & X & X & X & X & X &      % Homeo - C/C++
+            &   & X & X &   & X & X &   \\ % Java - Windows
+ \hline
+ PCSIM 0.5  
+            & X & X & X & X & X & / & X & X    % LIF - STDP
+            & X &   & / & X & X &   &   & X & /    % Homeo - C/C++
+            & X & X & X &   & X & X & / \\ % Java - Windows
+ \hline
+ \end{tabular}
+ 
+ *as defined in ~\citet{Rotter1999}
+ \label{tbl:SNN|comparison}
+\end{sidewaystable}
+\clearpage
+}
+
+All of the simulators listed in Table~\ref{tbl:SNN|comparison}
+offer many features
+that allow the simulation of complex neural networks on
+several back-ends. In addition, if users are interested in
+modeling certain details of the biological model that are not
+natively supported, all of the simulators offer ways to extend
+the code base, either by ways of plug-in code, implementation
+inheritance, or dynamic code generation. For example, both
+Brian and GeNN offer ways for the user to formulate any
+neuronal, synaptic, or learning model they please. This fact
+makes the simulators invaluable for power-users, but may be
+difficult for less-experienced programmers and may prohibit
+code-level optimizations for certain user-defined functionality.
+Nengo provides flexibility through its scripting interface, and
+also provides a graphical user interface to construct \acp{SNN} at
+different levels of abstraction. In Nengo, large-scale functional
+networks can be achieved using the \ac{NEF},
+which is a theoretical framework that can
+use anatomical constraints, functional objectives, and control
+theory to find the set of weights that approximate some
+desired functionality~\citep{Eliasmith2002}.
+
+Although all of the simulation environments listed in
+Table~\ref{tbl:SNN|comparison} have their own pros and cons,
+we believe that CARLsim 3 has advantages when it comes to
+efficiently simulating large-scale \acp{SNN} without
+having to sacrifice biological realism.
+In particular, we have made serious efforts to improve the
+usability of our platform by means of platform compatibility
+(Linux, Mac OS X, and Windows),
+rigorous code documentation
+(including an extensive user guide and tutorials),
+a regression suite for functional code verification,
+and a MATLAB toolbox for the visualization and analysis
+of neuronal, synaptic, and network information.
+CARLsim 3 provides native support for a range of spike-based synaptic
+plasticity mechanisms and topographic synaptic projections,
+as well as being among the first to provide support for a
+network-level parameter tuning interface~\citep{Carlson2014b}.
+Additionally, the PyNN-like interface, flexible visualization tools,
+and much improved documentation make CARLsim 3 easy to use.
+
+
+
+\section{Conclusion}
+
+CARLsim is an open-source, C/C++ based \ac{SNN} simulator that allows the
+execution of networks of Izhikevich spiking neurons with realistic synaptic
+dynamics on both generic x86 \acp{CPU} and standard off-the-shelf 
+\ac{CUDA}-enabled \acp{GPU}.
+The simulation library has minimal external dependencies and provides users
+with a PyNN-like programming interface.
+Additionally, CARLsim provides online and offline data analysis tools
+as well as support for an automated parameter tuning framework.
+The library, documentation, tutorials and examples can be obtained from:
+\url{http://www.socsci.uci.edu/~jkrichma/CARLsim}.
+

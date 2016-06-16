@@ -1,0 +1,1376 @@
+\chapter{3D Visual Response Properties of MSTd Emerge from an Efficient, Sparse
+Population Code}
+\label{ch:MSTd}
+
+\section{Introduction}
+
+Following information processing in \ac{MT}, 
+visual signals are sent in parallel to a number of neighboring regions, 
+including \acf{MSTd} for self-motion processing,
+\acf{MSTv} for processing of trajectories of moving objects, and the \acf{FST}
+for processing of actions and motions of animate entities \citep{Orban2008}
+(see Section~\ref{sec:BKG|MT}).
+In this chapter I focus on the processing of visual self-motion cues
+in area \ac{MSTd}.
+
+Neurons in \acf{MSTd} of 
+monkey extrastriate cortex respond to 
+relatively large and complex patterns of retinal flow, 
+often preferring a mixture of translational, rotational, and to a lesser degree 
+deformational flow components 
+\citep{Saito1986,TanakaSaito1989,DuffyWurtz1991a,Orban1992,Lagae1994,Mineault2012}.
+This has led researchers to suggest that \ac{MSTd} might play a key role in visual motion
+processing for self-movement perception. In fact, one of the most commonly documented 
+response properties of \ac{MSTd} neurons is that of heading selectivity
+\citep{TanakaSaito1989,DuffyWurtz1995,Lappe1996,BrittenVanWezel2002,PageDuffy2003,Gu2006,LoganDuffy2006,Gu2012}, and computational models can account for this finding
+\citep{Perrone1992,Zhang1993,PerroneStone1994,PerroneStone1998,Lappe1996,BeintemaVanDenBerg1998,BeintemaVanDenBerg2000,ZemelSejnowski1998}.
+However, a number of recent studies have found that nearly all visually responsive neurons 
+in macaque MSTd signal the three-dimensional (3D) direction of self-translation 
+(i.e., ``heading'') \citep{Gu2006,LoganDuffy2006,Gu2012}
+and self-rotation \citep{Takahashi2007} in response to both simulated and actual motion.
+In contrast to earlier studies that concentrated on a small number of MSTd neurons 
+preferring fore-aft (i.e., forward and backward) motion directions 
+(e.g., \cite{DuffyWurtz1995}), these more recent studies demonstrated that 
+heading preferences in MSTd were distributed throughout the spherical stimulus space, 
+and that there was a significant predominance of cells preferring lateral as opposed 
+to fore-aft headings. However, little is known about the underlying computational 
+principles by which these response properties are derived. 
+
+In this chapter I describe a computational model of MSTd based on the hypothesis 
+that neurons in MSTd efficiently encode the continuum of large-field retinal flow patterns
+encountered during self-movement on the basis of inputs received from neurons in MT.
+\acf{NMF} \citep{PaateroTapper1994,LeeSeung1999,LeeSeung2001},
+a linear dimensionality reduction technique, is used to find a set of 
+nonnegative basis vectors, which are interpreted as MSTd-like receptive fields. 
+\ac{NMF} is similar to \acf{PCA} and \acf{ICA}, 
+but unique among these dimensionality reduction techniques in that it can recover
+representations that are often sparse and “parts-based”, much like the intuitive notion 
+of combining parts to form a whole \citep{LeeSeung1999}.
+I aim to show that this computational principle can account for a wide range of 
+MSTd visual response properties, ranging from single-unit selectivity to 
+population statistics (such as 3D translation and rotation selectivity, spiral tuning, 
+and heading selectivity), and that seemingly contradicting findings in the literature 
+can be resolved by eliminating differences in neuronal sampling procedures.
+
+
+\section{Methods}
+\label{sec:MSTd|methods}
+The overall architecture of the model is depicted in Fig.~\ref{fig:MSTd|model}.
+Visual input to the system encompassed a range of idealized two-dimensional (2D) 
+flow fields caused by observer translations and rotations in a three-dimensional (3D)
+world. We sampled flow fields that mimic natural viewing conditions during locomotion 
+over ground planes and towards back planes located at various depths, with various 
+linear and angular observer velocities, to yield a total of $S$ flow fields, 
+comprising the input stimuli. Each flow field was processed by an array of $F$ 
+\ac{MT}-like motion sensors (\ac{MT}-like model units), each tuned to a specific 
+direction and speed of motion. 
+The activity values of the \ac{MT}-like model units were then arranged into the 
+columns of an $F \times S$ matrix, $\mathbf{V}$, which served as input for \acf{NMF}
+\citep{PaateroTapper1994,LeeSeung1999,LeeSeung2001}.
+\ac{NMF} belongs to a class of dimensionality reduction methods that can be used 
+to linearly decompose a multivariate data matrix, $\mathbf{V}$, into an inner product
+of two reduced-rank matrices, $\mathbf{W}$ and $\mathbf{H}$, such that $V \approx WH$. 
+The first of these reduced-rank matrices, $\mathbf{W}$, contains as its columns a 
+total of $B$ nonnegative basis vectors of the decomposition. 
+The second matrix, $\mathbf{H}$, contains as its rows the contribution of each 
+basis vector in the input vectors (the hidden coefficients). 
+These two matrices are found by iteratively reducing the residual between $\mathbf{V}$
+and $\mathbf{WH}$ using an alternating nonnegative least-squares method. 
+In our experiments, the only open parameter of the \ac{NMF} algorithm was the number 
+of basis vectors, $B$. We interpreted the columns of $\mathbf{W}$ as the weight vectors
+of a total of $B$ \ac{MSTd}-like model units. Each weight vector had $F$ elements
+representing the synaptic weights from the array of \ac{MT}-like model units onto a
+particular \ac{MSTd}-like model unit. The response of an \ac{MSTd}-like model unit 
+was given as the dot product of the $F$ \ac{MT}-like unit responses to a particular
+input stimulus and the corresponding nonnegative synaptic weight vector, $W$. 
+Crucially, once the weight matrix $W$ was found all parameter values remained fixed 
+across all experiments. The following subsections explain the model in detail.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\textwidth]{mst_fig1_model}
+  \caption{
+  Overall model architecture. A number $S$ of 2D flow fields depicting observer
+  translations and rotations in a 3D world were processed by an array of $F$ 
+  \ac{MT}-like motion sensors, each tuned to a specific direction and speed of motion. 
+  \ac{MT}-like activity values were then arranged into the columns of a data matrix, 
+  $\mathbf{V}$, which served as input for \acf{NMF}. 
+  The output of \ac{NMF} were two reduced-rank matrices, $\mathbf{W}$
+  (containing $B$ nonnegative basis vectors) and $\mathbf{H}$ (containing hidden
+  coefficients). Columns of $\mathbf{W}$ (basis vectors) were then interpreted as 
+  weight vectors of \ac{MSTd}-like model units.}
+  \label{fig:MSTd|model}
+\end{figure}
+
+
+\subsection{Optic Flow Stimuli}
+\label{sec:MSTd|methods|flow}
+Input to the model was a computer-generated $15 \times 15$ pixel array of simulated 
+optic flow. We simulated the apparent motion on the retina that would be caused by 
+an observer undergoing translations and rotations in a three-dimensional (3D) world 
+using the motion field model \citep{LonguetHigginsPrazdny1980}, where a pinhole 
+camera with focal length, $f$, is used to project 3D real-world points, 
+$\vec{P} = [X,Y,Z]^t$, onto a 2D image plane, $\vec{p} = [x,y]^t = f/Z [X,Y]^t$
+(i.e., the retina). Local motion at a particular position $\vec{p}$ on the image 
+plane was specified by a vector, $\dot{\vec{p}} = [\dot{x},\dot{y}]^t$, with local
+direction and speed of motion given as $\tan^{-1}⁡(\dot{y}/\dot{x})$ and
+$||\dot{\vec{x}}||$, respectively. The vector $\dot{\vec{p}}$ was expressed by the 
+sum of a translational flow component, 
+$\dot{\vec{x_{\textrm{T}}}} = [\dot{x_{\textrm{T}}},\dot{y_{\textrm{T}}}]^t$,
+and a rotational flow component, 
+$\dot{\vec{x_{\textrm{R}}}} = [\dot{x_{\textrm{R}}},\dot{y_{\textrm{R}}}]^t$:
+\begin{equation}
+\begin{bmatrix}
+\dot{x} \\ \dot{y}
+\end{bmatrix}
+=
+\begin{bmatrix}
+\dot{x_{\textrm{T}}} \\ \dot{y_{\textrm{T}}}
+\end{bmatrix}
++
+\begin{bmatrix}
+\dot{x_{\textrm{R}}} \\ \dot{y_{\textrm{R}}}
+\label{eqn:MSTd|methods|flow}
+\end{bmatrix}
+\end{equation}
+where the translational component depended on the camera's linear velocity, 
+$\vec{v} = [v_x,v_y,v_z]^t$, and the rotational component depended on the camera's
+angular velocity, $\vec{\omega} = [\omega_x,\omega_y,\omega_z]^t$:
+\begin{align}
+\begin{bmatrix}\dot{x_{\textrm{T}}} \\ \dot{y_{\textrm{T}}}\end{bmatrix} & = \frac{1}{Z} \begin{bmatrix}-f & 0 & x \\ 0 & -f & y\end{bmatrix} \begin{bmatrix}v_x \\ v_y \\ v_z\end{bmatrix} \label{eqn:MSTd|methods|flowT} \\
+\begin{bmatrix}\dot{x_{\textrm{R}}} \\ \dot{y_{\textrm{R}}}\end{bmatrix} & = \frac{1}{f} \begin{bmatrix}xy & -(f^2+x^2) & fy \\ f^2+y^2 & -xy & -fx\end{bmatrix} \begin{bmatrix}\omega_x \\ \omega_y \\ \omega_z\end{bmatrix} \label{eqn:MSTd|methods|flowR}
+\end{align}
+
+In our simulations, we set $f=\SI{0.01}{\meter}$ and 
+$x,y \in [\SI{-0.01}{\meter},\SI{0.01}{\meter}]$
+\citep{RaudiesNeumann2012}. The $15 \times 15$ optic flow array thus subtended
+$\SI{90}{\degree} \times \SI{90}{\degree}$ of visual angle.
+
+We sampled flow fields that mimic natural viewing conditions during locomotion 
+over a ground plane (tilted $\alpha=\SI{-30}{\degree}$ down from the horizontal)
+and toward a back plane (Fig.~\ref{fig:MSTd|flow}).
+Linear velocities corresponded to comfortable walking speeds 
+$||\vec{v}||=\{0.5, 1, 1.5\}$ meters per second, and angular velocities corresponded
+to common eye rotation velocities for gaze stabilization
+$||\vec{\omega}||={0, \pm 5, \pm 10}$ degrees per second \citep{PerroneStone1994}.
+Movement directions were uniformly sampled from all possible 3D directions 
+(i.e., including backward translations). Back and ground planes were located at
+distances $d={2,4,8,16,32}$ meters from the observer. This interval of depths 
+was exponentially sampled due to the reciprocal dependency between depth and the
+length of vectors of the translational visual motion field 
+(Eq.~\ref{eqn:MSTd|methods|flowT}) \citep{PerroneStone1994}.
+Note that $\dot{\vec{x_{\textrm{T}}}}$ depends on the distance to the point 
+of interest ($Z$) (Eq.~\ref{eqn:MSTd|methods|flowT}), but $\dot{\vec{x_{\textrm{R}}}}$
+does not (Eq.~\ref{eqn:MSTd|methods|flowR}). 
+The point at which $\dot{\vec{x_{\textrm{T}}}} = 0$ is referred to as the epipole
+or \acf{COM}. If the optic flow stimulus is radially expanding, as is the case 
+for translational forward motion, the \ac{COM} is called the \acf{FOE}.
+In the absence of rotational flow, the \ac{FOE} coincides with the direction of
+travel, or ``heading'' (Fig.~\ref{fig:MSTd|flow}A). 
+However, in the presence of rotational flow, the \ac{FOE} appears shifted with
+respect to the true direction of travel (Fig.~\ref{fig:MSTd|flow}B).
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.65\textwidth]{mst_fig2_opticflow}
+  \caption{
+  Example flow fields generated with the motion field model 
+  \citep{LonguetHigginsPrazdny1980} (modified from \cite{Raudies2013}).
+  We sampled flow fields that mimic natural viewing conditions during upright
+  locomotion toward a back plane (\textbf{A}) and over a ground plane (\textbf{B}).
+  Gray arrows indicate the axes of the 3D coordinate
+  system, and bold black arrows indicate self-movement (translation, 
+  straight arrows; rotation, curved arrows). Crosses indicate the direction of 
+  self-movement (i.e., heading), and squares indicate the \acf{COM}.
+  In the absence of rotation, the \ac{COM} indicates heading (\textbf{B}). 
+  \textbf{A}, Example of forward/sideward translation 
+  ($v_x=\SI{0.45}{\meter\per\second}, v_z=\SI{0.89}{\meter\per\second}$) 
+  toward a back plane located at a distance $Z(x,y)=\SI{10}{\meter}$. 
+  \textbf{B}, Example of curvilinear motion ($v_x=v_z=\SI{0.71}{\meter\per\second}$,
+  and yaw rotation $\omega_y=\SI{3}{\degree\per\second}$) over a ground plane 
+  located at distance $Z(y) = df/(y \cos(\alpha) + f \sin(\alpha))$, 
+  where $d=\SI{-10}{\meter}$ and $\alpha=\SI{-30}{\degree}$.}
+  \label{fig:MSTd|flow}
+\end{figure}
+
+\subsection{MT Stage}
+\label{sec:MSTd|methods|MT}
+Each virtual flow field was processed by an array of idealized \ac{MT}-like 
+model units, each selective to a particular direction of motion, 
+$\theta_{\textrm{pref}}$, and a particular speed of motion, 
+$\rho_{\textrm{pref}}$, at a particular spatial location, $(x,y)$. 
+The activity of each unit, $r_{\textrm{MT}}$, was given as:
+\begin{equation}
+r_{\textrm{MT}}(x,y;\theta_{\textrm{pref}},\rho_{\textrm{pref}}) = d_{\textrm{MT}} (x,y;\theta_{\textrm{pref}}) s_{\textrm{MT}}(x,y;\rho_{\textrm{pref}}), \label{sec:MSTd|methods|rMT}
+\end{equation}
+where $d_{\textrm{MT}}$ was the unit's direction response and $s_{\textrm{MT}}$
+was the unit's speed response. 
+
+A unit's direction tuning was given as a von Mises function based on the 
+difference between the local direction of motion at a particular spatial 
+location, $\theta(x,y)$, and the unit's preferred direction of motion, 
+$\theta_{\textrm{pref}}$ \citep{Mardia1972,Swindale1998,JazayeriMovshon2006}:
+\begin{equation}
+d_{\textrm{MT}} (x, y; \theta_{\textrm{pref}}) = \exp⁡ \bigg( \sigma_\theta \Big( \cos \big( \theta(x, y) - \theta_{\textrm{pref}} \big) - 1 \Big) \bigg) \label{sec:MSTd|methods|dMT}
+\end{equation}
+where the bandwidth parameter was $\sigma_\theta=3$, so that the resulting 
+tuning width (full width at half-maximum) was roughly \SI{90}{\degree}, 
+consistent with reported values in the literature \citep{BrittenNewsome1998}.
+
+A unit's speed tuning was given as a log-Gaussian function of the local speed
+of motion, $\rho(x,y)$, relative to the unit's preferred speed of motion, 
+$\rho_{\textrm{pref}}$ \citep{Nover2005}:
+\begin{equation}
+s_{\textrm{MT}} (x, y; \rho_{\textrm{pref}}) = \exp⁡ \Bigg( -\frac{\log^2⁡ \Big( \frac{\rho(x,y) + s_0}{\rho_{\textrm{pref}} + s_0} \Big)}{2\sigma_\rho^2} \Bigg), \label{eqn:MSTd|methods|sMT}
+\end{equation}
+where the bandwidth parameter was $\sigma_\rho=1.16$ and the speed offset 
+parameter was $s_0=0.33$, both of which corresponded to the medians of 
+physiological recordings \citep{Nover2005}. Note that the offset parameter, 
+$s_0$, was necessary to keep the logarithm from becoming undefined as 
+stimulus speed approached zero.
+
+As a result, the population prediction of speed discrimination thresholds 
+obeyed Weber's law for speeds larger than $\sim\SI{5}{\degree\per\second}$
+\citep{Nover2005}. We chose $5$ octave-spaced bins and a uniform distribution
+between \SI{0.5}{\degree\per\second} and \SI{32}{\degree\per\second}
+\citep{Nover2005}; that is, $\rho_{\textrm{pref}}=\{2,4,8,16,32\}$ degrees
+per second.
+
+At each spatial location there were a total of $40$ \ac{MT}-like model units
+(selective for eight directions times five speeds of motion), yielding a total
+of $F = 15 \times 15 \times 8 \times 5 = 9000$ units. The activity pattern
+of these $40$ units per pixel thus acted as a population code for the local
+direction and speed of motion. We assumed that the receptive fields of all
+\ac{MT}-like model units had a single pixel radius (subtending 
+$\sim\SI{3}{\degree}$ of visual angle), which is comparable to receptive field
+sizes near the fovea as found in macaque \ac{MT} \citep{Raiguel1995}.
+
+
+\subsection{Nonnegative Matrix Factorization (NMF)}
+\label{sec:MSTd|methods|NMF}
+We hypothesized that appropriate synaptic weights of the feed-forward 
+projections from \ac{MT} to \ac{MSTd} could be learned with \ac{NMF} 
+\citep{PaateroTapper1994,LeeSeung1999,LeeSeung2001}.
+\ac{NMF} belongs to a class of methods that can be used to decompose 
+multivariate data into an inner product of two reduced-rank matrices, 
+where one matrix contains nonnegative basis vectors and the other contains
+nonnegative activation vectors (hidden coefficients). The nonnegativity 
+constraints of \ac{NMF} enforce the combination of different basis vectors 
+to be additive, leading to representations that are often parts-based and 
+sparse \citep{LeeSeung1999}. When applied to neural networks, these 
+nonnegativity constraints correspond to the notion that neuronal firing rates 
+are never negative and that synaptic weights are either excitatory or 
+inhibitory, but they do not change sign \citep{LeeSeung1999}.
+
+Assume that we observe data in the form of a large number of i.i.d. random 
+vectors, $\vec{v}^{(i)}$, such as the neuronal activity of a population of 
+\ac{MT} neurons in response to a visual stimulus, where $i$ is the sample 
+index. When these vectors are arranged into the columns of a matrix \textbf{V},
+linear decompositions describe these data as 
+$\mathbf{V} \approx \mathbf{W} \mathbf{H}$, where \textbf{W} is a matrix that
+contains as its columns the basis vectors of the decomposition. 
+The rows of \textbf{H} contain the corresponding hidden coefficients that 
+give the contribution of each basis vector in the input vectors. 
+Like \acf{PCA}, the goal of \ac{NMF} is then to find a linear decomposition 
+of the data matrix \textbf{V}, with the additional constraint that all 
+elements of the matrices \textbf{W} and \textbf{H} be nonnegative. 
+In contrast to \acf{ICA}, \ac{NMF} does not make any assumptions about the
+statistical dependencies of \textbf{W} and \textbf{H}. 
+The resulting decomposition is not exact; \textbf{WH} is a lower-rank 
+approximation to \textbf{V}, and the difference between \textbf{WH} and 
+\textbf{V} is termed the reconstruction error. 
+Perfect accuracy is only possible when the number of basis vectors approaches
+infinity, but good approximations can usually be obtained with a reasonably 
+small number of basis vectors \citep{PougetSejnowski1997}.
+
+We used the standard \texttt{nnmf} function provided by MATLAB R2014a 
+(MathWorks, Inc.), which using an alternating least-squares algorithm, 
+aims to iteratively minimize the root-mean-squared residual \textbf{D} 
+between \textbf{V} and \textbf{WH}:
+\begin{equation}
+\mathbf{D} = \frac{||\mathbf{V} - \mathbf{WH}||}{\sqrt{FS}} 
+\label{eqn:MSTd|methods|NMF}
+\end{equation}
+where $F$ is the number of rows in \textbf{W} and $S$ is the number of columns
+in \textbf{H} (see Fig.~\ref{fig:MSTd|model}). \textbf{W} and \textbf{H}
+were normalized so that the rows of \textbf{H} had unit length. 
+The output of \ac{NMF} is not unique because of random initial conditions 
+(i.e., random weight initialization).
+The only open parameter was the number of basis vectors, $B$, whose value 
+had to be determined empirically. In our simulations we examined a range 
+of values ($B=2^i$, where $i=\{4,5,6,7,8\}$, see
+Section \ref{sec:MSTd|results|perceptual}), but found that $B=64$ led to 
+basis vectors that most resembled receptive fields found in macaque \ac{MSTd}. 
+In order to facilitate statistical comparisons between model responses and
+biological data, \ac{NMF} with $B=64$ was repeated $14$ times with different 
+random initial conditions to generate a total of $N=896$ \ac{MSTd}-like 
+model units.
+
+
+\subsection{MSTd Stage}
+\label{sec:MSTd|methods|MSTd}
+We interpreted the resulting columns of \textbf{W} as the weight vectors 
+from the population of $F$ \ac{MT}-like model units onto a population of $B$
+\ac{MSTd}-like model units. The activity of the $b$-th \ac{MSTd}-like unit,
+$r_{\textrm{MSTd}}^b$, was given as the dot product of all $F$ \ac{MT}-like
+responses to a particular input stimulus, $i$, and the unit's corresponding
+nonnegative weight vector:
+\begin{equation}
+r_{\textrm{MSTd}}^b (i) = \vec{v}^{(i)} \vec{w}^{(b)},
+\label{sec:MSTd|methods|rMSTd}
+\end{equation}
+where $\vec{v}^{(i)}$ was the $i$-th column of \textbf{V} and
+$\vec{w}^{(b)}$ was the $b$-th column of \textbf{W}. This is in agreement 
+with the finding that \ac{MSTd} responses are approximately linear in terms 
+of their feed-forward input from area \ac{MT} \citep{Tanaka1989,DuffyWurtz1991b},
+which provides one of the strongest projections to \ac{MST} in the macaque
+\citep{Boussaoud1990}. In contrast to other models 
+\citep{Lappe1996,ZemelSejnowski1998,Grossberg1999,Mineault2012},
+no additional nonlinearities were required to fit the data presented 
+in this work.
+
+
+\subsection{3D Translation/Rotation Protocol}
+\label{sec:MSTd|methods|3D}
+In order to determine 3D translation and rotation tuning profiles, 
+\ac{MSTd}-like model units were probed with two sets of virtual optic flow 
+stimuli as described by \cite{Takahashi2007}.
+
+The ``translation protocol'' consisted of straight translational movements 
+along $26$ directions in 3D space, corresponding to all combinations of 
+azimuth and elevation angles in increments of \SI{45}{\degree} 
+(Fig.~\ref{fig:MSTd|3D}A). This included all combinations of movement 
+vectors having eight different azimuth angles 
+($0$, \SI{45}{\degree}, \SI{90}{\degree}, \SI{135}{\degree}, 
+\SI{180}{\degree}, \SI{225}{\degree}, \SI{270}{\degree}, and \SI{315}{\degree};
+Fig.~\ref{fig:MSTd|3D}B), each of which was presented at three different
+elevation angles (Fig.~\ref{fig:MSTd|3D}): $0$ (the horizontal plane) and
+$\pm \SI{45}{\degree}$ (for a sum of $8 \times 3 = 24$ directions).
+Two additional directions were specified by elevation angles of \SI{-90}{\degree}
+and \SI{+90}{\degree}, which corresponded to upward and downward movement
+directions, respectively.
+
+The ``rotation protocol'' consisted of rotations about the same $26$ directions,
+which now represented the corresponding axes of rotation according to the 
+right-hand rule (Fig.~\ref{fig:MSTd|3D}B, C). For example, azimuths of $0$ and
+\SI{180}{\degree} (elevation, $0$) corresponded to pitch-up and pitch-down 
+rotations, respectively. Azimuths of \SI{90}{\degree} and \SI{270}{\degree}
+(elevation, $0$) corresponded to roll rotations (right-ear down and 
+left-ear down, respectively). Finally, elevation angles of \SI{-90}{\degree}
+and \SI{+90}{\degree} corresponded to leftward or rightward yaw rotation,
+respectively.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\textwidth]{mst_fig3_3D}
+  \caption{
+  Schematic of the $26$ translational and rotational directions used to test 
+  \ac{MSTd}-like model units (modified from \cite{Takahashi2007}). 
+  \textbf{A}, Illustration of the $26$ movement vectors, spaced \SI{45}{\degree}
+  apart on the sphere, in both azimuth and elevation. 
+  \textbf{B}, Top view: Definition of azimuth angles. 
+  \textbf{C}, Side view: Definition of elevation angles. Straight arrows 
+  illustrate the direction of movement in the translation protocol, whereas 
+  curved arrows indicate the direction of rotation (according to the right-hand
+  rule) about each of the movement vectors.}
+  \label{fig:MSTd|3D}
+\end{figure}
+
+
+\subsection{Heading Tuning Index}
+\label{sec:MSTd|methods|HTI}
+To quantify the strength of heading tuning of a model unit, we followed a 
+procedure described by \cite{Gu2006} to compute a \acf{HTI}. 
+In each trial, the activity of a model unit was considered to represent the
+magnitude of a 3D vector whose direction was defined by the azimuth and 
+elevation angles of the respective movement trajectory \citep{Gu2006}.
+A \ac{HTI} was then computed for each model unit using the following equation:
+\begin{equation}
+\mathrm{HTI}^b = \frac{|\sum_{i=1}^n r^b_{\textrm{MSTd}}(i) \vec{e_i}|}{\sum_{i=1}^n |r^b_{\textrm{MSTd}}(i) \vec{e_i}|} 
+\label{eqn:MSTd|methods|HTI}
+\end{equation}
+where $r_{\textrm{MSTd}}^b (i)$ was the activity of the $b$-th model unit for
+the $i$-th stimulus, $\vec{e_i}$ was a unit vector indicating the 3D Cartesian
+heading direction of the $i$-th stimulus, $|\cdot|$ denoted vector magnitude, 
+and $n=26$ corresponded to the number of different heading directions tested
+(see Section \ref{sec:MSTd|methods|3D}).
+The \ac{HTI} ranged from $0$ to $1$, where $0$ indicated weak and $1$ 
+indicated strong direction tuning. The preferred heading direction for each
+stimulus was then computed from the azimuth and elevation of the vector sum 
+of the individual responses (numerator in Eq.~\ref{eqn:MSTd|methods|HTI}).
+
+
+\subsection{Uniformity Test}
+\label{sec:MSTd|methods|uniformity}
+To determine whether a measured distribution was significantly different 
+from uniform, we performed a resampling analysis as described by 
+\cite{Takahashi2007}. First, we calculated the sum-squared error (across bins)
+between the measured distribution and an ideal uniform distribution containing 
+the same number of observations. This calculation was repeated for $1000$
+different random distribution generated using the \texttt{unifrnd} function
+provided by MATLAB R2014a (MathWorks, Inc.) in order to produce a distribution 
+of sum-squared error values that represent random deviations from an ideal 
+uniform distribution. If the sum-squared error for the experimentally measured
+distribution lay outside the \SI{95}{\percent} confidence interval of values
+from the randomized distributions, the measured distribution was considered 
+to be significantly different from uniform ($p<0.05$)
+\citep{Takahashi2007}.
+
+
+\subsection{Decoding Population Activity}
+\label{sec:MSTd|methods|popact}
+We tested whether perceptual variables such as heading or angular velocity 
+could be decoded from the population activity of \ac{MSTd}-like model units 
+using simple linear regression. We assembled a data set consisting of
+$10^4$ flow fields with randomly selected headings, which depicted linear
+observer movement (velocities sampled uniformly between 
+\SI{0.5}{\meter\per\second} and \SI{2}{\meter\per\second}; no eye rotations)
+towards a back plane located at various distances $d=\{2,4,8,16,32\}$ meters
+away. As part of a ten-fold cross-validation procedure, stimuli were split
+repeatedly into a training set containing $9000$ stimuli and a test set 
+containing $1000$ stimuli. Using linear regression, we then obtained a set 
+of $N \times 2$ linear weights used to decode \ac{MSTd} population activity
+in response to samples from the training set, and monitored performance on 
+the test set \citep{PicardCook1984}.
+
+For forward headings and in the absence of eye rotations, heading coincides 
+with the location of the \ac{FOE} on the retina 
+(see Section \ref{sec:MSTd|methods|flow}).
+Conceptually, the 2D Cartesian coordinates of the \ac{FOE} can be found by 
+setting $\dot{\vec{x_{\textrm{T}}}} = 0$ in Eq.~\ref{eqn:MSTd|methods|flowT},
+and solving for $(x,y)$. However, because these coordinates could approach 
+infinity for lateral headings, we only considered cases of headings 
+(in spherical coordinates) with azimuth angles between \SI{45}{\degree} and
+\SI{135}{\degree}, as well as elevation angles between \SI{-45}{\degree} and
+\SI{+45}{\degree}.
+
+Similarly, we obtained a set of $N \times 2$ linear weights to predict the 
+2D Cartesian components of angular velocity, $\dot{\vec{x_{\textrm{R}}}}$.
+In this case, the data set contained stimuli consisting only of rotational 
+flow components (i.e., $\vec{x_{\textrm{T}}} = 0$ in
+Eq.~\ref{eqn:MSTd|methods|flow}).
+In order to compare model performance to neurophysiological studies
+\citep{BenHamed2003}, we randomly selected $N=144$ model units from the 
+population and limited rotations to the X--Z plane (i.e., $\omega_y=0$ in
+Eq.~\ref{eqn:MSTd|methods|flowR}).
+
+
+\subsection{Sparseness}
+\label{sec:MSTd|methods|sparseness}
+We computed a sparseness metric for the modeled \ac{MSTd} population activity
+according to the definition of sparseness by \cite{VinjeGallant2000}:
+\begin{equation}
+s = \bigg( 1 - \frac{1}{N} \frac{(\sum_i r_i)^2}{\sum_i r_i^2} \bigg) \bigg/ \bigg( 1 - \frac{1}{N} \bigg)
+\label{eqn:MSTd|methods|sparseness}
+\end{equation}
+Here, $s \in [0,1]$ is a measure of sparseness for a signal $r$ with $N$ 
+sample points, where $s=1$ denotes maximum sparseness and is indicative of 
+a local code, and $s=0$ is indicative of a dense code. In order to measure 
+how many \ac{MSTd}-like model units were activated by any given stimulus
+(population sparseness), $r_i$ was the response of the $i$-th neuron to a
+particular stimulus and $N$ was the number of model units. In order to 
+determine how many stimuli any given model unit responded to (lifetime 
+sparseness), $r_i$ was the response of a unit to the $i$-th stimulus and $N$
+was the number of stimuli. Population sparseness was averaged across stimuli
+and lifetime sparseness was averaged across units.
+
+
+\subsection{Fisher Information Analysis}
+\label{sec:MSTd|methods|fisher}
+To investigate whether simulated \ac{MSTd} population activity could account 
+for the dependence of psychophysical thresholds on reference heading, we 
+followed a procedure described by \cite{Gu2010} to compute Fisher information,
+$I_\mathrm{F}$, which provides an upper limit on the precision with which an
+unbiased estimator can discriminate small variations in a variable ($x$) 
+around a reference value ($x_{\mathrm{ref}}$):
+\begin{equation}
+I_{\mathrm{F}} = \sum_{i=1}^N \frac{R'_i(x_{\mathrm{ref}}^2)}{\sigma_i(x_{\mathrm{ref}}^2)},
+\end{equation}
+where $N$ denotes the number of neurons in the population, 
+$R'_i(x_{\mathrm{ref}})$ denotes the derivative of the tuning curve for the 
+$i$-th neuron at $x_{\mathrm{ref}}$, and $\sigma_i(x_{\mathrm{ref}})$ is the
+variance of the response of the $i$-th neuron at $x_{\mathrm{ref}}$. 
+Neurons with steeply sloped tuning curves and small variance will contribute
+most to Fisher information. In contrast, neurons having the peak of their 
+tuning curve at $x_{\mathrm{ref}}$ will contribute little.
+
+In order to calculate tuning curve slope, $R'_i(x_{\textrm{ref}})$, we used
+a spline function (\SI{0.01}{\degree} resolution) to interpolate among 
+coarsely sampled data points (\SI{30}{\degree} spacing). In order to calculate
+variance, $\sigma_i(x_{\mathrm{ref}})$, \cite{Gu2010} assumed that neurons 
+have independent noise and Poisson spiking statistics. Because the model 
+units described in this paper are deterministic, we instead calculated signal
+variance directly from the response variability of the network when presented
+with random dot clouds generated from a particular 3D heading ($150$ 
+repetitions).
+
+
+\section{Results}
+\subsection{3D Translation and Rotation Selectivity}
+\label{sec:MSTd|results|3D}
+We tested whether individual units in our model of \ac{MSTd} could signal 
+the 3D direction of self-translation and self-rotation when presented with 
+large-field optic flow stimuli, and compared our results to neurophysiological
+data from \cite{Gu2006} and \cite{Takahashi2007}. Visual stimuli depicted
+translations and rotations of the observer through a 3D cloud of dots that
+occupied a space \SI{40}{\centi\meter} deep and subtended 
+$\SI{90}{\degree} \times \SI{90}{\degree}$ of visual angle 
+(see Section \ref{sec:MSTd|methods|3D}). In the translation protocol, 
+movement trajectories were along $26$ directions or ``headings'' 
+(Fig.~\ref{fig:MSTd|3D}A), corresponding to all combinations of azimuth and
+elevation angles in increments of \SI{45}{\degree} (Fig.~\ref{fig:MSTd|3D}B, C;
+straight arrows). In the rotation protocol, these $26$ directions served as
+rotation axes instead (Fig.~\ref{fig:MSTd|3D}B, C; curved arrows).
+Linear velocity was \SI{1}{\meter\per\second}, and angular velocity was
+\SI{20}{\degree\per\second} \citep{Takahashi2007}.
+
+Fig.~\ref{fig:MSTd|transrot} shows the 3D translation and rotation tuning 
+of a particular neuron in macaque \ac{MSTd} (Fig.~\ref{fig:MSTd|transrot}A, C)
+\citep{Takahashi2007} and of an \ac{MSTd}-like model unit with similar tuning
+(Fig.~\ref{fig:MSTd|transrot}B, D). The 3D directional tuning profile is 
+shown as a contour map in which activity (mean firing rate for neuron in 
+macaque \ac{MSTd}; unit activation for \ac{MSTd}-like model unit, see 
+Eq.~\ref{eqn:MSTd|methods|flow}), here represented by color, is plotted as a
+function of azimuth (abscissa) and elevation (ordinate). Each contour map 
+shows the Lambert cylindrical equal-area projection of the original spherical 
+data, where the abscissa corresponds to the azimuth angle and the ordinate is
+a sinusoidally transformed version of elevation angle \citep{Snyder1987}.
+The peak response of this particular \ac{MSTd} neuron occurred at 
+\SI{291}{\degree} azimuth and \SI{-18}{\degree} elevation in the case of 
+rotation (corresponding approximately to a left ear-down roll rotation, 
+with small components of pitch and yaw rotation), and at \SI{190}{\degree}
+azimuth and \SI{-50}{\degree} elevation in the case of translation 
+(corresponding to backwards motion) \citep{Takahashi2007}. 
+The peak response of the \ac{MSTd}-like model unit occurred at \SI{268}{\degree}
+azimuth, \SI{-21}{\degree} elevation and \SI{176}{\degree} azimuth, 
+\SI{-41}{\degree} elevation for rotation and translation, respectively. 
+Typical for \ac{MSTd} neurons whose visual translation and rotation preferences
+are linked by the two-dimensional (2D) visual motion selectivity of the cell, 
+peak responses occur at stimulus directions roughly \SI{90}{\degree} apart 
+on the sphere \citep{Takahashi2007}.
+Model \ac{MSTd} appropriately captured this effect.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\textwidth]{mst_fig4_transrot}
+  \caption{
+  Example of 3D direction tuning for an \ac{MSTd} neuron (rotation, \textbf{A};
+  translation, \textbf{C}), reprinted from \cite{Takahashi2007} (their Fig. $4$),
+  and a similarly tuned \ac{MSTd}-like model unit (rotation, \textbf{B};
+  translation, \textbf{D}). Color contour maps show the mean firing rate or 
+  model activation as a function of azimuth and elevation angles. Each contour 
+  map shows the Lambert cylindrical equal-area projection of the original 
+  data, where the abscissa corresponds to the azimuth angle and the ordinate 
+  is a sinusoidally transformed version of elevation angle \citep{Snyder1987}.}
+  \label{fig:MSTd|transrot}
+\end{figure}
+
+Fig.~\ref{fig:MSTd|poptransrot} shows the distribution of direction preferences
+of \ac{MSTd} cells (Fig.~\ref{fig:MSTd|poptransrot}A, C)
+\citep{Gu2006,Takahashi2007} and \ac{MSTd}-like model units 
+(Fig.~\ref{fig:MSTd|poptransrot}B, D) for visual translation and rotation. 
+Each data point in these scatter plots specifies the preferred 3D direction 
+of a single neuron or model unit. Histograms along the boundaries show the 
+marginal distributions of azimuth and elevation preferences. The direction
+preference (for rotation and translation, separately) was defined by the 
+azimuth and elevation of the vector average of the neural responses (see 
+Section~\ref{sec:MSTd|methods|3D}). The distributions of azimuth and 
+elevation preference were significantly nonuniform for both rotation and
+translation conditions ($p<0.05$, see Section~\ref{sec:MSTd|methods|uniformity}),
+tightly clustered around $0$ and \SI{180}{\degree} azimuth as well as
+\SI{-90}{\degree} and \SI{+90}{\degree} elevation. In agreement with macaque
+\ac{MSTd}, the majority of all $896$ \ac{MSTd}-like model units had rotation
+preferences within \SI{30}{\degree} of the yaw or pitch axes, and only few 
+model unit had their rotation preference within \SI{30}{\degree} of the roll 
+axis (Table~\ref{tbl:MSTd|visrot}). 
+For translation, the majority of direction preferences were 
+within \SI{30}{\degree} of the lateral or vertical axes, with only a handful 
+of fore-aft direction preferences (Table~\ref{tbl:MSTd|vistrans}).
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.9\textwidth]{mst_fig5_pop_transrot}
+  \caption{
+  Distribution of 3D direction preferences of \ac{MSTd} neurons 
+  (rotation, \textbf{A}; translation, \textbf{C}), reprinted from 
+  \cite{Takahashi2007} (their Fig. $6$), and the population of 
+  \ac{MSTd}-like model units (rotation, \textbf{B}; translation, \textbf{D}). 
+  Each data point in the scatter plot corresponds to the preferred azimuth 
+  (abscissa) and elevation (ordinate) of a single neuron or model unit. 
+  Histograms along the top and right sides of each scatter plot show the 
+  marginal distributions. Also shown are 2D projections (front view, side view, 
+  and top view) of unit-length 3D preferred direction vectors (each radial 
+  line represents one neuron or model unit). 
+  The neuron in Fig.~\ref{fig:MSTd|transrot} is represented as open circles 
+  in each panel.}
+\label{fig:MSTd|poptransrot}
+\end{figure}
+
+\begin{table}[h]
+ \centering
+ \caption{Percentage of neurons and model units with preferred rotation directions within $\pm \SI{30}{\degree}$ of each of the cardinal axes.}
+ \begin{tabular}{|llll|}
+ \hline
+ Visual rotation & Yaw & Pitch & Roll \\
+ \hline
+ \cite{Takahashi2007} & $36/127$ (\SI{28}{\percent})
+ & $27/127$ (\SI{21}{\percent}) & $1/127$ (\SI{1}{\percent}) \\
+ This work & $216/896$ (\SI{24}{\percent}) & $330/896$ (\SI{37}{\percent})
+ & $4/896$ (\SI{1}{\percent}) \\
+ \hline
+ \end{tabular}
+ \label{tbl:MSTd|visrot}
+\end{table}
+
+\begin{table}[h]
+ \centering
+ \caption{Percentage of neurons and model units with preferred translation directions within $\pm \SI{30}{\degree}$ of each of the cardinal axes.}
+ \begin{tabular}{|llll|}
+ \hline
+ Visual rotation & Lateral & Fore-aft & Vertical \\
+ \hline
+ \cite{Takahashi2007} & $57/307$ (\SI{19}{\percent})
+ & $20/307$ (\SI{7}{\percent}) & $76/307$ (\SI{25}{\percent}) \\
+ This work & $245/896$ (\SI{27}{\percent}) & $5/896$ (\SI{1}{\percent})
+ & $192/896$ (\SI{21}{\percent}) \\
+ \hline
+ \end{tabular}
+ \label{tbl:MSTd|vistrans}
+\end{table}
+
+We also quantified the strength of heading tuning in model \ac{MSTd} using
+a \acf{HTI} \citep{Gu2006}, which ranged from $0$ to $1$ indicating poor and
+strong tuning, respectively (see Section~\ref{sec:MSTd|methods|HTI}). 
+For reference, a model unit with idealized cosine tuning would have an 
+\ac{HTI} value of $0.31$, whereas an \ac{HTI} value of $1$ would be reached
+when firing rate is zero for all but a single stimulus direction. 
+In the translation condition, \cite{Gu2006} reported \ac{HTI} values 
+averaging $0.48 \pm 0.16$ SD for their sample of $251$ \ac{MSTd} cells. 
+Model \ac{MSTd} achieved very similar \ac{HTI} values averaging 
+$0.43 \pm 0.11$ SD and $0.47 \pm 0.11$ SD in the translation and rotation
+conditions, respectively.
+
+In addition, \cite{Takahashi2007} tested a subset of \ac{MSTd} cells with 
+both the rotation and translation protocols in order to directly compare 
+the difference in 3D direction preference 
+($|\Delta$ preferred direction$|$) between rotation and translation 
+(Fig.~\ref{fig:MSTd|vectransrot}A). The distribution was strongly nonuniform
+with a mode near \SI{90}{\degree}. The simulated \ac{MSTd} units appropriately
+captured this distribution (Fig.~\ref{fig:MSTd|vectransrot}B). However, 
+because $|\Delta$ preferred direction$|$ is computed as the smallest 
+angle between a pair of preferred direction vectors in three dimensions, it is 
+only defined between $0$ and \SI{180}{\degree}. Therefore, the observed peak
+near \SI{90}{\degree} in Fig.~\ref{fig:MSTd|vectransrot}A, B could be derived
+from a single mode at \SI{90}{\degree} or from two modes at 
+$\pm \SI{90}{\degree}$. Only the former but not the latter would indicate 
+that the visual preferences for translation and rotation are linked via the 
+2D visual motion selectivity of the cell or model unit \citep{Takahashi2007}.
+Therefore, we also illustrate the differences in 2D direction preferences by
+projecting each 3D preference vector onto the three cardinal planes: 
+X--Y (front view), Y--Z (side view), and X--Z (top view) for both \ac{MSTd}
+(Fig.~\ref{fig:MSTd|vectransrot}C) and model \ac{MSTd}
+(Fig.~\ref{fig:MSTd|vectransrot}D). Since some planar projections might be small
+in amplitude, we also calculated the ratio of the lengths of each difference 
+vector in 2D and 3D and plotted them against the 2D preferred direction 
+difference (Fig.~\ref{fig:MSTd|vectransrot}E, F). Consistent with macaque 
+\ac{MSTd}, the projections of the visual difference vector onto the X--Z and
+Y--Z planes were relatively small (Fig.~\ref{fig:MSTd|vectransrot}E, F; 
+green and blue data points). In contrast, projections onto the X--Y plane
+were notably larger (Fig.~\ref{fig:MSTd|vectransrot}E, F; red data points) 
+and tightly centered at \SI{-90}{\degree} (Fig.~\ref{fig:MSTd|vectransrot}C, D),
+with no cells or model units having direction differences of \SI{+90}{\degree}
+between visual translation and rotation. Thus, these simulated data are 
+consistent with the idea that preferred directions for translation and rotation 
+are related through the 2D visual motion selectivity of neurons in \ac{MSTd}.
+
+\afterpage{%
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.7\textwidth]{mst_fig6_vec_transrot}
+  \caption{
+  Direction differences between rotation and translation, for \ac{MSTd} neurons
+  (\textbf{A}, \textbf{C}, \textbf{E}), reprinted from \cite{Takahashi2007}
+  (their Fig. 6), and the population of \ac{MSTd}-like model units 
+  (\textbf{B}, \textbf{D}, \textbf{F}). 
+  \textbf{A}, \textbf{B}, Histograms of the absolute differences in 3D 
+  preferred direction ($|\Delta$ preferred direction$|$) between 
+  rotation and translation. 
+  \textbf{C}, \textbf{D}, Distributions of preferred direction differences
+  as projected onto each of the three cardinal planes, corresponding to 
+  front view, side view, and top view. 
+  \textbf{E}, \textbf{F}, The ratio of the lengths of the 2D and 3D preferred direction vectors is plotted as a function of the corresponding 2D projection of the difference in preferred direction (red, green, and blue circles for each of the front view, side view, and top view data, respectively).}
+  \label{fig:MSTd|vectransrot}
+\end{figure}
+\clearpage
+}
+
+\subsection{Efficient Encoding of Multiple Perceptual Variables}
+\label{sec:MSTd|results|perceptual}
+\ac{MSTd} activity plays a causal role in the perception of heading from 
+optic flow \citep{Gu2010,Gu2012}. During forward movement, retinal flow 
+radiates out symmetrically from a single point, the \ac{FOE}, from which
+heading can be inferred \citep{Gibson1950}. \cite{PageDuffy1999} found that
+the location of the \ac{FOE} could be decoded to a very high degree of 
+precision (i.e., within $\pm \SI{10}{\degree}$) from the trial-averaged 
+population response of neurons in \ac{MSTd}. \cite{BenHamed2003} then went
+on to show that the \ac{FOE} in both eye-centered and head-centered 
+coordinates could be decoded from \ac{MSTd} population activity with an 
+optimal linear estimator even on a single-trial basis, with an error of 
+$0.5-\SI{1.5}{\degree}$ and SD of $2.4-\SI{3}{\degree}$. Interestingly, 
+they found that other perceptual variables such as eye position and the 
+direction of ocular pursuit could be decoded with similar error rates, and 
+that most \ac{MSTd} neurons were involved in the simultaneous encoding of 
+more than one of these variables \citep{BenHamed2003}.
+
+We therefore wondered whether the 2D coordinates 
+($x_{\mathrm{FOE}},y_{\mathrm{FOE}}$) of the \ac{FOE} of arbitrary expansive
+flow fields could be decoded from a population of $N$ \ac{MSTd}-like model 
+units with similar precision. To answer this question, we assembled a data 
+set of $10^4$ flow fields with randomly selected headings (azimuth between
+\SI{45}{\degree} and \SI{135}{\degree}, elevation between \SI{-45}{\degree}
+and \SI{+45}{\degree}), depicting linear observer movements towards a back
+plane located at various distances, $d=\{1,2,4,8\}$, in front of the observer.
+Using simple linear regression in a cross-validation procedure (see 
+Section~\ref{sec:MSTd|methods|popact}), we obtained a set of $N \times 2$
+linear weights used to decode \ac{MSTd} population activity in response to 
+samples from the training set. We then tried to predict heading in flow 
+samples from the test set (i.e., headings the network had not seen before) 
+using the learned weights, and assessed prediction error rates. The same 
+procedure was repeated for a set of rotational flow fields designed to mimic
+visual consequences of slow, pursuit-like eye movements (i.e., restricted to 
+the frontoparallel plane, $\omega_y=0$). Here, the goal of the network was 
+to predict the 2D Cartesian components of angular velocity 
+$(\omega_x,\omega_z)$.
+
+The results are summarized in Table~\ref{tbl:MSTd|FOE}.
+Both heading and eye velocity could be inferred from the population activity 
+of model \ac{MSTd} ($N=144$) with error rates on the order of 
+$\SI{0.1}{\degree}-\SI{1}{\degree}$, consistent with neurophysiological data
+\citep{BenHamed2003,PageDuffy2003}. Note that these numbers were achieved on
+the test set; that is, on flow fields the model had never seen before. 
+Heading prediction error on the test set thus corresponded to the model's 
+ability to generalize; that is, to deduce the appropriate response to a 
+novel stimulus using what it had learned from other previously encountered 
+stimuli \citep{Hastie2009,SpanneJorntell2015}.
+
+\begin{table}[t]
+ \centering
+ \caption{Sparse population code for perceptual variables ($N=144$).}
+ \begin{tabular}{|lll|}
+ \hline
+  & FOE $(x,y)$ & Eye velocity ($\omega_x,\omega_y$) \\
+ \hline
+ \cite{BenHamed2003} & (\SI{3.62}{\degree} $\pm$ \SI{6.78}{\degree},
+ 	\SI{3.87}{\degree} $\pm$ \SI{4.96}{\degree})
+    & (\SI{1.39}{\degree} $\pm$ \SI{1.38}{\degree} $\pm$ \SI{3.02}{\degree}) \\
+ This work & (\SI{5.75}{\degree} $\pm$ \SI{5.62}{\degree}, 
+ 	\SI{6.02}{\degree} $\pm$ \SI{5.51}{\degree})
+    & (\SI{0.82}{\degree} $\pm$ \SI{0.89}{\degree}, 
+    \SI{0.92}{\degree} $\pm$ \SI{0.99}{\degree}) \\
+ \hline
+ \end{tabular}
+ \label{tbl:MSTd|FOE}
+\end{table}
+
+What might be the nature of the population code in \ac{MSTd} that underlies
+the encoding of heading and eye velocity? One possibility would be that 
+\ac{MSTd} contains a set of distinct subpopulations, each specialized to 
+encode a particular perceptual variable. Instead, \cite{BenHamed2003}
+found that neurons in \ac{MSTd} acted more like basis functions, where a 
+majority of cells was involved in the simultaneous encoding of multiple 
+perceptual variables. A similar picture emerged when we investigated the
+involvement of \ac{MSTd}-like model units in the encoding of both heading
+and simulated eye rotation velocity (Fig.~\ref{fig:MSTd|FOE}A). 
+A model unit was said to contribute to the encoding of a perceptual variable 
+if both of its linear decoding weights exceeded a certain threshold, set at
+\SI{1}{\percent} of the maximum weight magnitude across all $N \times 2$
+weight values. If this was true for both heading (i.e., \ac{FOE}) and eye 
+velocity (i.e, pursuit, P), the unit was said to code for both (labeled 
+``FOE\&P'' in Fig.~\ref{fig:MSTd|FOE}A), which was the case for 
+\SI{57}{\percent} of all units. Analogously, if the weights exceeded the 
+threshold for only variable or the other, the unit was labeled either 
+``FOE'' or ``P''. Only a few units did not contribute at all (labeled 
+``none''.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\textwidth]{mst_fig7_foepursuit}
+  \caption{
+  Population code underlying the encoding of perceptual variables such as 
+  heading (focus of expansion, \ac{FOE}) and eye velocity (pursuit, P). 
+  \textbf{A}, Distribution of \ac{FOE} and pursuit selectivities in \ac{MSTd}
+  (dark gray), adapted from \cite{BenHamed2003} (their Fig. 3), and in the
+  population of \ac{MSTd}-like model units (light gray). 
+  Neurons or model units were involved in encoding either heading (``FOE''), 
+  eye velocity (``P''), both (``EYE \& P''), or neither (``none''). 
+  \textbf{B}, Heading prediction (generalization) error as a function of 
+  the number of basis vectors using ten-fold cross-validation. Vertical bars 
+  are the SD. 
+  \textbf{C}, Population and lifetime sparseness as a function of the number 
+  of basis vectors. Operating the sparse decomposition model with $B=64$
+  basis vectors co-optimizes for both accuracy and efficiency of the encoding, 
+  and leads to basis vectors that resemble \ac{MSTd} receptive fields.}
+  \label{fig:MSTd|FOE}
+\end{figure}
+
+Finally, we asked how the accuracy and efficiency of the encoding would 
+change with the number of basis vectors (i.e., the only open parameter of 
+\ac{NMF}, see Section~\ref{sec:MSTd|methods|NMF}). 
+In order to determine accuracy, we repeated the heading decoding experiment 
+for a number of basis vectors $B=2^i$, where $i \in \{4, 5, \ldots, 8\}$, an
+d measured the Euclidean distance between the predicted and actual 2D 
+\ac{FOE} coordinates. The result is shown in Fig.~\ref{fig:MSTd|FOE}B. 
+Each data point shows the model's heading prediction error on the test set 
+for a particular number of basis vectors, averaged over ten trials (i.e., the
+ten folds of the cross-validation procedure). The vertical bars are the SD. 
+The lowest prediction error was achieved with $B=64$ (Kolmogorov-Smirnov 
+test, $p \approx 10^{-12}$). In order to determine the sparseness of the 
+population code, we investigated how many \ac{MSTd}-like model units were
+activated by any given stimulus in the data set (population sparseness) as 
+well as how many stimuli any given model unit responded to (lifetime 
+sparseness) (Fig.~\ref{fig:MSTd|FOE}C). Sparseness metrics were computed 
+according to the definition by \cite{VinjeGallant2000}, which can be 
+understood as a measure of both the nonuniformity (``peakiness'') and 
+strength of the population response (see 
+Section~\ref{sec:MSTd|methods|sparseness}). A sparseness value of zero 
+would be indicative of a dense code (where every stimulus would activate 
+every neuron), whereas a sparseness value of one would be indicative of a 
+local code (where every stimulus would activate only one neuron) 
+\citep{SpanneJorntell2015}. As expected, the analysis revealed that both
+population and lifetime sparseness monotonously increased with an increasing 
+number of basis vectors. Sparseness values ranging from roughly $0.41$ for
+$B=16$ to $0.65$ for $B=256$ suggested that the population code was sparse
+in all cases, as it did not get close to the extreme case of either a local 
+or a dense code.
+
+Overall these results suggest that our model is compatible with a series of
+findings demonstrating that macaque MSTd might encode a number of self-motion
+related variables using a distributed, versatile population code that is not
+restricted to a specific subpopulation of neurons within \ac{MSTd}
+\citep{Bremmer1998,BenHamed2003,Gu2010,Xu2014}.
+Interestingly, we found that the sparseness regime in which model \ac{MSTd}
+achieved the lowest heading prediction error (Fig.~\ref{fig:MSTd|FOE}C) was 
+also the regime in which \ac{MSTd}-like model units reproduced a variety of 
+known \ac{MSTd} visual response properties 
+(Figs.~\ref{fig:MSTd|transrot}--\ref{fig:MSTd|vectransrot},
+\ref{fig:MSTd|discriminability}--\ref{fig:MSTd|duffywurtz}).
+
+
+\subsection{Heading Perception During Eye Movements}
+\label{sec:MSTd|results|eyemovements}
+We also studied how the accuracy of the population code for heading in model
+\ac{MSTd} is affected by eye movements. Eye movements distort the pattern of 
+full-field motion on the retina, causing the \ac{FOE} of an expanding flow 
+field to no longer indicate heading (see Section~\ref{sec:MSTd|methods|flow}).
+Under these circumstances, the brain must find a way to discount the motion
+components caused by eye rotations. The classical viewpoint is that this is
+achieved with the help of extraretinal signals \citep{Wallach1987}
+(but see \cite{Kim2015}). Indeed, macaque \ac{MSTd} might be well-equipped 
+to account for eye movement-related signals
+\citep{KomatsuWurtz1988,Newsome1988,Bradley1996,PageDuffy1999,Morris2012}.
+
+In order to investigate the effect of eye movements on heading perception, 
+we asked if model \ac{MSTd} could predict heading for a number of simulated 
+scene layouts using the linear decoding weights described in the previous 
+section, and compared the results to the psychophysical study of 
+\cite{Royden1994}. In these experiments, observers viewed displays of 
+randomly-placed dots whose motions simulated translation in the absence 
+and presence of rotations toward a back plane 
+(Fig.~\ref{fig:MSTd|eyemovements}A), a ground plane
+(Fig.~\ref{fig:MSTd|eyemovements}D), and a 3D dot cloud
+(Fig.~\ref{fig:MSTd|eyemovements}G). Observers were instructed to fixate a
+cross that either remained stationary in the center of the display (simulated
+eye movement condition) or moved horizontally across the display on the 
+horizontal midline (real eye movement condition) with speeds of $0$, 
+$\pm \SI{1}{\degree\per\second}$, $\pm \SI{2.5}{\degree\per\second}$,
+and $\pm \SI{5}{\degree\per\second}$. At the end of the motion sequence, 
+seven equally-spaced lines appeared \SI{4}{\degree} apart, and the observers
+indicated the line closest to their perceived headings (seven-alternative, 
+forced-choice paradigm (7AFC)). Behavioral results are shown in 
+Fig.~\ref{fig:MSTd|eyemovements}B, E, and H for the simulated eye movement
+condition (closed symbols) and real eye movement condition (open symbols), 
+averaged over $20$ trials.
+
+\afterpage{%
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\textwidth]{mst_fig8_heading}
+  \caption{
+  Heading perception during observer translation in the presence of eye 
+  movements. Shown are three different scene geometries (back plane, 
+  \textbf{A}--\textbf{C}; ground plane, \textbf{D}--\textbf{F}; 
+  dot cloud, \textbf{G}--\textbf{I}), reprinted from \cite{Royden1994}
+  (their Figs. $6$, $8$-–$9$, $12$-–$13$). Observer translation was parallel
+  to the ground and was in one of three directions (open circles), coinciding 
+  with the fixation point. Real and simulated eye movements were presented 
+  with rates of $0$, $\pm \SI{1}{\degree\per\second}$, 
+  $\pm \SI{2.5}{\degree\per\second}$, or $\pm \SI{5}{\degree\per\second}$. 
+  \textbf{B}, \textbf{E}, \textbf{H}, Perceived heading reported by human 
+  subjects for real and simulated eye movements (open and closed symbols,
+  respectively).
+  \textbf{C}, \textbf{F}, \textbf{I}, Behavioral performance of model 
+  \ac{MSTd} for simulated eye movements. Horizontal dotted lines indicate 
+  the actual headings of \SI{-4}{\degree} (blue triangles), 
+  $0$ (green squares), and \SI{+4}{\degree} (red circles) relative to 
+  straight ahead.}
+  \label{fig:MSTd|eyemovements}
+\end{figure}
+\clearpage
+}
+
+We applied the same experimental protocol to model \ac{MSTd}. Visual 
+stimuli were generated according to the motion parameters provided by 
+\cite{Royden1994}, and subtended $\SI{90}{\degree} \times \SI{90}{\degree}$
+of visual angle. Heading predictions were generated by applying the linear
+decoding weights described in the previous section to \ac{MSTd} population
+activity. These predictions were then rounded to the nearest available 
+heading in the 7AFC task (\SI{4}{\degree} apart, therefore spanning 
+$\pm \SI{12}{\degree}$ around straight ahead). 
+Fig.~\ref{fig:MSTd|eyemovements}C, F, and I summarize heading predictions
+of model \ac{MSTd} averaged over $20$ trials for reference headings of 
+\SI{-4}{\degree} (blue circles), $0$ (green squares), and \SI{+4}{\degree}
+(red triangles) relative to straight ahead. Consistent with the simulated 
+eye movement condition, model \ac{MSTd} made systematic prediction errors, 
+which were largest for observer movement over a ground plane 
+(Fig.~\ref{fig:MSTd|eyemovements}F).
+
+\subsection{Population Code Underlying Heading Discrimination}
+\label{sec:MSTd|results|discrimination}
+Another interesting behavioral effect that might be due to \ac{MSTd}
+population coding is the fact that heading discrimination is most precise
+when subjects have to discriminate small variations around straight-ahead
+headings \citep{CrowellBanks1993,Gu2010}. It was long believed that this
+behavioral effect could be explained by an abundance of \ac{MSTd} neurons
+preferring straight-ahead headings with sharp tuning curves (e.g., 
+\cite{DuffyWurtz1995}). However, \cite{Gu2010} were able to demonstrate that
+this behavior might instead be due to an abundance of \ac{MSTd} neurons
+preferring lateral headings with broad, cosine-like tuning curves 
+\citep{Lappe1996,Gu2006}, causing their peak discriminability (steepest
+tuning-curve slopes) to lie near straight-ahead headings.
+
+We tested whether simulated population activity in model \ac{MSTd} could 
+account for these behavioral effects by computing peak discriminability 
+and Fisher information from heading tuning curves, following the experimental
+protocol of \cite{Gu2010}. Peak discriminability occurs for motion directions
+where the slope of a neuronal tuning curve is steepest
+\citep{SeungSompolinsky1993,PurushothamanBradley2005,JazayeriMovshon2006},
+and Fisher information puts an upper bound on the precision with which 
+population activity can be decoded with an unbiased estimator 
+\citep{SeungSompolinsky1993,Pouget1998}.
+
+The heading tuning curve of every model unit was measured by presenting 
+$24$ directions of self-translation in the horizontal plane 
+($0$, $\pm \SI{15}{\degree}$,$\pm \SI{30}{\degree}$, \ldots, 
+$\pm \SI{165}{\degree}$ and \SI{180}{\degree} relative to straight ahead, 
+while elevation was fixed at $0$) through a 3D cloud of dots that occupied
+a space that was \SI{0.75}{\meter} deep, subtended 
+$\SI{90}{\degree} \times \SI{90}{\degree}$ of visual angle, and drifted 
+at \SI{0.3}{\meter\per\second} (see Section~\ref{sec:MSTd|methods|3D}).
+Here we adapted the coordinate system to coincide with the one used by 
+\cite{Gu2010}, so that azimuth angles were expressed relative to straight 
+ahead. The slope of the tuning curve was computed by interpolating the 
+coarsely sampled data using a spline function (resolution: \SI{0.01}{\degree})
+and then taking the spatial derivative of the fitted curve at each possible
+reference heading. Peak discriminability was achieved where the slope of the 
+tuning curve was steepest.
+
+\afterpage{%
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.95\textwidth]{mst_fig9_discriminability}
+  \caption{
+  Heading discriminability based on population activity in macaque \ac{MSTd}
+  (\textbf{A}, \textbf{C}), reprinted from \cite{Gu2010} (their Fig. 4), 
+  and in model \ac{MSTd} (\textbf{B}, \textbf{D}). 
+  \textbf{A}, \textbf{B}, Distribution of the direction of maximal
+  discriminability. 
+  \textbf{C}, \textbf{D}, Scatter plot of each neuron's or model unit's 
+  tuning width at half maximum versus preferred direction. The top histogram
+  shows the marginal distribution of heading preferences. Also highlighted 
+  is a subpopulation of neurons or model units with direction preferences 
+  within \SI{45}{\degree} of straight ahead and tuning width 
+  $<\SI{115}{\degree}$ (open symbols).}
+  \label{fig:MSTd|discriminability}
+\end{figure}
+\clearpage
+}
+
+Fig.~\ref{fig:MSTd|discriminability} shows the distribution of reference 
+headings at which neurons in \ac{MSTd} exhibit their minimum neuronal 
+threshold (Fig.~\ref{fig:MSTd|discriminability}A) \citep{Gu2010},
+compared to peak discriminability computed from simulated activity of 
+\ac{MSTd}-like model units (Fig.~\ref{fig:MSTd|discriminability}B). 
+Both neurophysiologically measured and simulated distributions had clear 
+peaks around forward ($0$) and backward (\SI{180}{\degree}) headings. 
+To further illustrate the relationship between peak discriminability and 
+peak firing rate, the tuning width at half maximum is plotted versus heading
+preference (location of peak firing rate) for neurons in macaque \ac{MSTd}
+(Fig.~\ref{fig:MSTd|discriminability}C) and \ac{MSTd}-like model units 
+(Fig.~\ref{fig:MSTd|discriminability}D). Consistent with neurons in 
+macaque \ac{MSTd}, the distribution of preferred headings in model \ac{MSTd}
+was significantly nonuniform ($p<0.05$, see
+Section~\ref{sec:MSTd|methods|uniformity}) with peaks at $\pm \SI{90}{\degree}$
+azimuth relative to straight ahead (i.e., lateral headings), and most model 
+units had broad tuning widths ranging between \SI{90}{\degree} and
+\SI{180}{\degree}. Surprisingly, our model was also able to recover what
+appears to be a distinct subpopulation of narrowly-tuned units that 
+prefer forward headings (open circles in 
+Fig.~\ref{fig:MSTd|discriminability}C, D).
+
+Fig.~\ref{fig:MSTd|fisher} shows population Fisher information derived from
+interpolated tuning curves for $882$ neurons in macaque \ac{MSTd}
+(Fig.~\ref{fig:MSTd|fisher}A, red) and $896$ \ac{MSTd}-like model units
+(Fig.~\ref{fig:MSTd|fisher}B). According to Eq.~\ref{eqn:MSTd|methods|flow},
+the contribution of each neuron (model unit) to Fisher information is the 
+square of its tuning curve slope at a particular reference heading divided 
+by the corresponding mean firing rate (unit activation). Note that even 
+though \ac{MSTd}-like model units are deterministic, they exhibit response
+variability when repeatedly presented with 3D clouds made from dots with 
+random depth ($150$ repetitions, see Section~\ref{sec:MSTd|methods|fisher}).
+Consistent with data from macaque \ac{MSTd}, there is a clear dependence of
+Fisher information on reference heading for our population of \ac{MSTd}-like
+model units, with a maximum occurring for headings near $0$ (i.e., straight 
+ahead) and a minimum occurring for headings near $\pm \SI{90}{\degree}$
+(i.e., lateral headings).
+
+Overall these results are in good agreement with population statistics 
+reported by \cite{Gu2010}, and provide further computational support that
+behavioral dependence on reference heading can be largely explained by the 
+precision of an \ac{MSTd}-like population code. 
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\textwidth]{mst_fig10_fisher}
+  \caption{
+  Population Fisher information of macaque \ac{MSTd} (\textbf{A}), 
+  reprinted from \cite{Gu2010} Fig. 5), and of model \ac{MSTd} (\textbf{B}).
+  Error bands in \textbf{A} represent \SI{95}{\percent} confidence 
+  intervals derived from a bootstrap procedure.}
+  \label{fig:MSTd|fisher}
+\end{figure}
+
+
+\subsection{Gaussian Tuning in Spiral Space}
+\label{sec:MSTd|results|spiralspace}
+The finding that lateral headings are overrepresented in \ac{MSTd}
+\citep{Gu2006,Takahashi2007,Gu2010} then raise the question as to how 
+these recent data might be reconciled with earlier studies reporting an 
+abundance of \ac{MSTd} cells preferring forward motions (i.e., expanding
+flow stimuli) (e.g., \cite{DuffyWurtz1995}). A possible explanation was 
+offered by \citep{Gu2010}1, who hypothesized that observed differences in
+population statistics might be (at least partially) due to a selection 
+bias: In order to locate visually responsive cells in \ac{MSTd}, the authors
+of earlier studies tended to screen for cells that discharge in response
+to expansion stimuli \citep{DuffyWurtz1991a,Graziano1994,DuffyWurtz1995}.
+In contrast, later studies recorded from any \ac{MSTd} neuron that was
+spontaneously active or responded to a large-field flickering random-dot 
+stimulus \citep{Gu2006,Takahashi2007,Gu2010}.
+
+To test their hypothesis, we applied the same selection bias to our sample
+of \ac{MSTd}-like model units, and restricted further analysis to the 
+selected subpopulation. The selection process was mimicked simply by 
+making it more likely for a model unit to be selected the stronger it
+responded to an expansion stimulus. Out of a total of $896$ \ac{MSTd}-like
+model units, $188$ were selected for further processing.
+
+We then proceeded with the experimental protocol described by 
+\cite{Graziano1994} establish a visual tuning profile for the remaining 
+$188$ model units. Model units were presented with eight optic flow stimuli 
+that spanned what they termed ``spiral space'': expansion, contraction, 
+clockwise rotation (CW), counterclockwise rotation (CCW), and four 
+intermediate spiral patterns. These stimuli differed from previously 
+described optic flow stimuli in that they did not accurately depict observer
+motion in 3D. Instead, stimulus diameter was limited to \SI{30}{\degree}, 
+and angular velocity simply increased with distance to the center of the
+stimulus, with a maximum speed of \SI{17.2}{\degree\per\second}. 
+As in the study of \cite{Graziano1994}, we fit the resulting tuning curves 
+with a Gaussian function to find the peak (the mean of the Gaussian) that
+corresponded to the preferred direction in spiral space, and to provide a
+measure of bandwidth ($\sigma$, the SD of the Gaussian) and goodness-of-fit
+($r$, the correlation coefficient).
+
+The results are shown in Fig.~\ref{fig:MSTd|graziano}. 
+When looking at the preferred motion direction of \ac{MSTd} cells 
+(Fig.~\ref{fig:MSTd|graziano}A), \cite{Graziano1994} observed Gaussian 
+tuning across the full range of rotational flow fields. Here, $0$ 
+corresponded to clockwise rotation, \SI{90}{\degree} to expansion, 
+\SI{180}{\degree} to counterclockwise rotation, \SI{270}{\degree} to 
+contraction, and the oblique directions (\SI{45}{\degree}, 
+\SI{135}{\degree}, \SI{225}{\degree}, and \SI{315}{\degree}) corresponded
+to four intermediate spiral stimuli. Each arrow indicated the preferred 
+direction or peak response (the mean of the Gaussian) of each neuron 
+($N=57$) in spiral space. Consistent with these data from macaque \ac{MSTd},
+the majority of preferred spiral directions in our subpopulation of 
+\ac{MSTd}-like model units ($N=188$) clustered near expansion, with only 
+few units preferring contraction, and roughly \SI{51}{\percent} of units
+were spiral-tuned (vs. \SI{35}{\percent} in their sample)
+(Fig.~\ref{fig:MSTd|graziano}B, E). Similar to \SI{86}{\percent} of isolated
+\ac{MSTd} cells having smooth tuning curves and good Gaussian fits (i.e.,
+a correlation coefficient of $r \geq 0.9$, with an average $r$ of $0.97$),
+$112$ of $188$ \ac{MSTd}-like model units (\SI{60}{\percent}) had 
+$r \geq 0.9$, with an average $r$ of $0.924$. Compared to real \ac{MSTd}
+neurons, the model units had comparable, although slightly broader Gaussian
+widths (an average $\sigma$ of \SI{111}{\degree} and SE of \SI{24}{\degree}
+in our case versus an average $\sigma$ of \SI{61}{\degree} and SE of 
+\SI{5.9}{\degree} in their case).
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\textwidth]{mst_fig11_graziano}
+  \caption{
+  Gaussian tuning in spiral space. 
+  \textbf{A}, Gaussian tuning of a sample of $57$ neurons across the full 
+  range of rotational flow fields, reprinted from \cite{Graziano1994}
+  (their Fig. 9). Each arrow indicates the peak response (the mean of the
+  Gaussian fit) of each neuron in spiral space. 
+  \textbf{B}, The distribution of preferred spiral directions of a sample of 
+  $112$ \ac{MSTd}-like model units whose tuning curves were well-fit with a
+  Gaussian. Model units were more likely to be included in the sample the
+  stronger they responded to an expansion stimulus. 
+  \textbf{C}, The distribution of preferred spiral directions applied to 
+  the entire population of $896$ MSTd-like model units, of which $677$ had
+  smooth Gaussian fits. 
+  \textbf{D}, Bar plot of the data in \textbf{A}, for better comparison, 
+  adapted from \cite{Clifford1999}. 
+  \textbf{E}, Bar plot of the data in \textbf{B}. 
+  \textbf{F}, Bar plot of the data in \textbf{C}.}
+  \label{fig:MSTd|graziano}
+\end{figure}
+
+If the predominance of expansion cells in Fig.~\ref{fig:MSTd|graziano}D is
+truly due to a pre-selection procedure, then any bias in the data should be
+removed when the above experimental procedure is applied to all cells in 
+\ac{MSTd}. Indeed, extending the analysis to the entire population of 
+\ac{MSTd}-like model units revealed a more uniform sampling of direction
+selectivity across spiral space (Fig.~\ref{fig:MSTd|graziano}C), which 
+flattened the distribution of preferred motion directions 
+(Fig.~\ref{fig:MSTd|graziano}F). $677$ of $896$ \ac{MSTd}-like model units
+(\SI{76}{\percent}) had $r \geq 0.9$, with an average $r$ of $0.929$, an 
+average $\sigma$ of \SI{108}{\degree}, and SE of \SI{9.1}{\degree}.
+
+
+\subsection{Continuum of 2D Response Selectivity}
+\label{sec:MSTd|results|continuum2D}
+Interestingly, the same narrative can be applied to other early studies of 
+\ac{MSTd} in which cells were supposedly selected depending on how well 
+they responded to radial motion. For example, using a ``canonical'' set of
+twelve flow stimuli (eight directions of planar motion; expansion and
+contraction; clockwise and counterclockwise rotation), \cite{DuffyWurtz1995}
+showed that most neurons in \ac{MSTd} were sensitive to multiple flow 
+components, with only few neurons responding exclusively to either planar,
+circular, or radial motion. In a sample of $268$ \ac{MSTd} cells,
+\cite{DuffyWurtz1995} found that \SI{18}{\percent} of cells primarily 
+responded to one component of motion (planar, circular, or radial), that
+\SI{29}{\percent} responded to two components (planocircular or planoradial,
+but rarely circuloradial), and that \SI{39}{\percent} responded to all 
+three components (Fig.~\ref{fig:MSTd|duffywurtz}A).
+
+We simulated their experiments by presenting the same twelve stimuli to 
+the subpopulation of $188$ \ac{MSTd}-like model units described above, and
+classified their responses. \cite{DuffyWurtz1995} classified neurons 
+according to the statistical significance of their responses, which was 
+difficult to simulate since \ac{MSTd}-like model units did not have a 
+defined noise level or baseline output. Instead we mimicked their selection
+criterion by following a procedure from \cite{PerroneStone1998}, where the
+response of a model unit was deemed ``significant'' if it exceeded 
+\SI{12}{\percent} of the largest response that was observed for any model
+unit in response to any of the tested stimuli.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\textwidth]{mst_fig12_duffywurtz}
+  \caption{
+  Continuum of response selectivity. 
+  \textbf{A}, Response classification of a sample of $268$ \ac{MSTd} neurons,
+  reprinted from \cite{DuffyWurtz1995} (their Fig. 3). 
+  \textbf{B}, Response classification of a sample of $188$ \ac{MSTd}-like
+  model units. Model units were more likely to be included in the sample 
+  the stronger they responded to an expansion stimulus. 
+  \textbf{C}, Response classification of the entire population of $896$
+  \ac{MSTd}-like model units. Triple-component cells were: planocirculoradial
+  (PCR), nonselective excitatory (NSE), and nonselective inhibitory (NSI).
+  Double-component cells were: planoradial (PR), planocircular (PC), and
+  circuloradial (CR). Single-component cells were: planar (P), radial (R),
+  and circular (C). \SI{81}{\percent} of neurons in \textbf{A}, 
+  \SI{88}{\percent} of model units in \textbf{B}, and \SI{77}{\percent} of
+  model units in \textbf{C} responded to more than one type of motion.}
+  \label{fig:MSTd|duffywurtz}
+\end{figure}
+
+Without further adjustments, our model recovered a distribution of response
+selectivities very similar to those reported by \cite{DuffyWurtz1995}
+(Fig.~\ref{fig:MSTd|duffywurtz}B): The largest group was formed by 
+triple-component or planocirculoradial (PCR) \ac{MSTd}-like model units with
+selective responses to planar, circular, and radial stimuli (white). 
+Double-component units were mainly planoradial (PR) with responses to a 
+planar or radial stimulus (magenta), with few planocircular (PC) units 
+(yellow) and only a handful of circuloradial (CR) units (cyan). 
+Single-component cells were mainly planar (P) units (red), with only few 
+radial (R) units and circular (C) units (blue). We did not find any 
+nonselective excitatory (NSE) or nonselective inhibitory (NSI) units 
+(because our model did not include inhibitory units).
+
+Only \SI{1}{\percent} of the cells observed by \cite{DuffyWurtz1995} were
+circuloradial (CR) cells, which they suggested were equivalent to the 
+spiral-selective neurons reported by \cite{Graziano1994}. Thus they 
+concluded that spiral tuning was rare in \ac{MSTd}. Interestingly, our 
+model recovers distributions that are comparable to both empirical studies; 
+that is, an abundance of spiral-tuned cells in Fig.~\ref{fig:MSTd|graziano},
+and an abundance of PCR cells in Fig.~\ref{fig:MSTd|duffywurtz}. 
+Our results thus offer an alternative explanation to these seemingly
+contradictive findings, by considering that most spiral-tuned cells, as
+identified by \cite{Graziano1994}, might significantly respond to planar 
+stimuli when analyzed under the experimental protocol of \cite{DuffyWurtz1995},
+effectively making most spiral-tuned cells part of the PCR class of cells, 
+as opposed to the CR class of cells.
+
+What might these data look like in the absence of any pre-selection procedure? 
+To answer this question, we extended the response classification to the entire
+population of $896$ \ac{MSTd}-like model units. As is evident in 
+Fig.~\ref{fig:MSTd|duffywurtz}C, this analysis revealed a large fraction of
+P units that had not previously been included. In addition, the relative
+frequency of units responding to radial motion (i.e., R, PR, and PCR units)
+decreased noticeably.
+
+Overall, these results suggest that our model is in agreement with a wide 
+variety of \ac{MSTd} data collected under different experimental protocols, 
+and offers an explanation of how these data might be brought into agreement
+when differences in the sampling procedure are accounted for.
+
+
+
+\section{Discussion}
+We found that applying \ac{NMF} \citep{PaateroTapper1994,LeeSeung1999,LeeSeung2001}
+to \ac{MT}-like patterns of activity can account for several essential response properties
+of \ac{MSTd} neurons, such as 3D translation and rotation selectivity 
+\citep{Gu2006,Takahashi2007}, tuning to radial, circular, and spiral motion patterns
+\citep{Graziano1994,Lagae1994,DuffyWurtz1995}, as well as heading selectivity
+\citep{PageDuffy1999,BenHamed2003,PageDuffy2003}.
+This finding suggests that these properties might emerge from \ac{MSTd} neurons 
+performing a biological equivalent of dimensionality reduction on their inputs. 
+Furthermore, the model accurately captures prevalent statistical properties of 
+visual responses in macaque \ac{MSTd}, such as an overrepresentation of lateral headings
+\citep{Lappe1996,Gu2006,Takahashi2007,Gu2010} that can predict behavioral thresholds
+of heading discrimination \citep{Gu2010} and heading perception during eye movements
+\citep{Royden1994}. At the population level, model \ac{MSTd} efficiently and accurately
+predicts a number of perceptual variables (such as heading and eye rotation velocity) 
+using a sparse distributed code \citep{OlshausenField1996,OlshausenField1997,BenHamed2003},
+consistent with ideas from the efficient-coding and free-energy principles
+\citep{Attneave1954,Barlow1961,Linsker1990,SimoncelliOlshausen2001,Friston2006,Friston2010}.
+
+\subsection{Sparse Decomposition Model of MSTd}
+\label{sec:MSTd|discussion|model}
+It is well-known that \ac{MSTd} neurons do not decompose optic flow into its first-order
+differential invariants (i.e., into components of divergence, curl, and deformation
+\citep{KoenderinkVanDoorn1975}). Instead, neurons in \ac{MSTd} act as  ``templates''
+\citep{Perrone1992} that perform a dot product-type operation to signal how well the 
+apparent motion on the retina matches their preferred flow component 
+or mixture of components \citep{Saito1986,Tanaka1989,Orban1992}.
+This ``template matching'' was later demonstrated to be a powerful approach to 
+self-motion analysis possibly at work at least in mammals 
+\citep{LappeRauschecker1994,PerroneStone1994,PerroneStone1998} and insects
+\citep{KrappHengstenberg1996,Srinivasan1996,Krapp2000}; all without the need to perform
+a mathematical decomposition of optic flow.
+
+Alternatively, we provide computational evidence that \ac{MSTd} neurons might decompose
+optic flow in the sense of matrix factorization, in order to reduce the number of 
+``templates'' used to represent the spectrum of retinal flow fields encountered during 
+self-movement in an efficient and parsimonious fashion. 
+Such a representation would be in agreement with the efficient-coding or infomax principle 
+\citep{Attneave1954,Barlow1961,Linsker1990,SimoncelliOlshausen2001}, which posits
+that sensory systems should employ knowledge about statistical regularities of their input
+in order to maximize information transfer. 
+If information maximization is interpreted as optimizing for both accuracy 
+(prediction error) and efficiency (model complexity), then the efficient-coding principle 
+can be understood as a special case of the free-energy principle 
+\citep{Friston2006,Friston2010}.
+
+A sparse, parts-based decomposition model of \ac{MSTd} implements these principles in that 
+it can co-optimize accuracy and efficiency by representing high-dimensional data with a
+relatively small set of highly informative variables. 
+As such the model is intimately related to the framework of nonnegative sparse coding
+\citep{Hoyer2002,EggertKorner2004}.
+Efficiency is achieved through sparseness, which is a direct result of \ac{NMF}'s
+nonnegativity constraints \citep{LeeSeung1999}. 
+Accuracy trades off with efficiency, and can be achieved by both minimizing 
+reconstruction error and controlling for model complexity (i.e., by tuning the number of
+basis vectors) (see Fig.~\ref{fig:MSTd|discriminability}).
+Statistical knowledge enters the model via relative frequencies of observations in the 
+input data, which are controlled by both natural viewing conditions and natural scene
+statistics. 
+\ac{NMF} explicitly discourages statistically inefficient representations, because 
+strongly accounting for a rare observation at the expense of ignoring a more common 
+stimulus component would result in an increased reconstruction error. 
+
+Interestingly, we found that the sparseness regime in which model \ac{MSTd} achieved the
+lowest heading prediction error and thus showed the greatest potential for generalization 
+(Fig.~\ref{fig:MSTd|FOE}B, C) was also the regime in which \ac{MSTd}-like model units
+reproduced a variety of known \ac{MSTd} visual response properties
+(Figs.~\ref{fig:MSTd|transrot}--\ref{fig:MSTd|vectransrot},
+\ref{fig:MSTd|discriminability}--\ref{fig:MSTd|duffywurtz}).
+In contrast to findings about early sensory areas
+\citep{OlshausenField1996,OlshausenField1997,VinjeGallant2000}, this regime does not 
+utilize an overcomplete dictionary, yet can still be considered a sparse coding regime
+\citep{SpanneJorntell2015}.
+Sparse codes are a trade-off between dense codes (where every neuron is involved in 
+every context, leading to great memory capacity but suffering from cross-talk among 
+neurons) and local codes (where there is no interference but also no capacity for
+generalization) \citep{SpanneJorntell2015}. 
+We speculate that sparse codes with a relatively small dictionary akin to the one
+described in this paper might be better suited (as opposed to overcomplete basis sets) 
+for areas such as \ac{MSTd}, because the increased memory capacity of such a code might 
+lead to compact and multi-faceted encodings of various perceptual variables 
+\citep{Bremmer1998,BenHamed2003,Brostek2014}.
+
+\subsection{Model Limitations}
+\label{sec:MSTd|discussion|limitations}
+Despite its simplicity the present model is able to explain a variety of \ac{MSTd}
+visual response properties. However, a number of issues remain to be addressed in the 
+future, such as the fact that neurons in \ac{MSTd} are also driven by vestibular
+\citep{PageDuffy2003,Gu2006,Takahashi2007} and eye movement-related signals
+\citep{KomatsuWurtz1988,Newsome1988,Bradley1996,PageDuffy1999,Morris2012}.
+In addition, some neurons are selective not just for heading, but also for path and place
+\citep{FroehlerDuffy2002,Page2015}. Also, we have not yet attempted to model the complex, 
+nonlinear interactions found among different subregions of the receptive field 
+\citep{DuffyWurtz1991b,Lagae1994,Mineault2012}, but speculate that they might be similar 
+to the ones reported in \ac{MT} \citep{Majaj2007,Richert2013}.
+At a population level, \ac{MSTd} exhibits a range of tuning behaviors from pure retinal 
+to head-centered stimulus velocity coding \citep{BenHamed2003,Yu2010,Brostek2014}
+that include intermediate reference frames \citep{Fetsch2007}.
+From a theoretical standpoint, the sparse decomposition model seems a good candidate to 
+find an efficient, reference frame-agnostic representation of various perceptual 
+variables \citep{PougetSejnowski1997,PougetSnyder2000,BenHamed2003},
+but future iterations of the model will have to address these issues step-by-step.
+
+\subsection{Model Alternatives}
+\label{sec:MSTd|discussion|alternatives}
+Several computational models have tried to account for heading-selective cells in 
+area \ac{MSTd}. In the heading-template model \citep{PerroneStone1994,PerroneStone1998},
+\ac{MSTd} forms a ``heading map'', with each \ac{MSTd}-like unit receiving input from a
+mosaic of \ac{MT}-like motion sensors that correspond to the flow that would arise from
+a particular heading. 
+Heading is then inferred by the preferred \ac{FOE} of the most active heading template. 
+A complication of this type of model is that it requires an extremely large number of
+templates to cover the combinatorial explosion of heading parameters, eye rotations, 
+and scene layouts \citep{PerroneStone1994}, even when the input stimulus space is
+restricted to gaze-stabilized flow fields \citep{PerroneStone1998}.
+The velocity gain field model \citep{BeintemaVanDenBerg1998,BeintemaVanDenBerg2000}
+tries to reduce the number of combinations by using templates that uniquely pick up the
+rotational component of flow, but recent evidence argues against this type of model
+\citep{BerezovskiiBorn2000,Duijnhouwer2013}.
+In a related approach to the one presented in this paper, \cite{ZemelSejnowski1998}
+proposed that neurons in \ac{MST} encode hidden causes of optic flow, by using a 
+sparse distributed representation that facilitates image segmentation and object- or 
+self-motion estimation by downstream read-out neurons. 
+Unfortunately, they did not quantitatively assess many of the response properties 
+described in this paper. In addition, their model showed an overrepresentation of 
+expanding flow stimuli, which is hard to reconcile with recent findings 
+\citep{Gu2006}.
+
+In contrast, our model offers a biologically plausible account of a wide range of visual
+response properties in \ac{MSTd}, ranging from single-unit activity to population 
+statistics. Adoption of the sparse decomposition model supports the view that 
+single-unit preferences emerge from the pressure to find an efficient representation 
+of large-field motion stimuli (as opposed to encoding a single variable such as heading),
+and that these units act in concert to represent perceptual variables both accurately 
+\citep{Gu2010} and efficiently \citep{BenHamed2003}.

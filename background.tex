@@ -1,0 +1,992 @@
+\chapter{Background}
+\label{ch:background}
+
+\section{Visual Motion Perception}
+\subsection{Introduction}
+Visual motion captures a fundamental aspect of our interactions 
+with the world around us.
+The first steps in seeing begin in the retina, where visual motion appears
+as the change of structured patterns of light
+that can occur for a number of reasons---either because something in 
+the environment moves, or because the observer moves within the environment.
+Because retinal image motion has multiple possible causes, it is both
+computationally challenging and richly informative,
+a phenomenon that was first described and conceptualized by
+\cite{Helmholtz1925} and \cite{Gibson1950}.
+\cite{Gibson1950} realized that the apparent motion in our retinas that is
+caused by the relative movement between an observer and a visual scene
+(termed ``optic flow'') could be used to detect one's own movement
+in the scene, to enable perception of the shape, distance, and movement of
+objects in the world, and to aid the control of locomotion.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.9\textwidth]{back_perception}
+  \caption{
+  From retinal input to cortical processing and perception
+  (adapted from \cite{NassiCallaway2009}).
+  Visual input is initially encoded in the retina as a two-dimensional (2D)
+  distribution of light intensity, expressed as a function of position, wavelength,
+  and time in each of the two eyes.
+  This retinal image is transferred to the visual cortex, where sensory cues and
+  (later) inferred attributes are eventually computed.}
+  \label{fig:BKG|perception}
+\end{figure}
+
+A general principle in the processing of visual motion by vertebrate brains
+appears to be the evolution of specialized biological structures capable
+of efficiently extracting different types of commonly used visual information.
+For example, when the vertebrate (``camera-like'') eye evolved 
+more than 540 million years ago,
+it already contained photoreceptors, capable of converting incoming
+patterns of light into an electrochemical signal \citep{Lamb2007}.
+In the visual system of today's primates, 
+different photoreceptors are specialized for different attributes of light 
+(e.g., color, luminance)
+and operate as part of a population of cells,
+where each cell is concerned with only a small part of the visual field
+(``retinal tiling'') while being largely oblivious to light changes that occur
+outside that small region \citep{NassiCallaway2009}.
+As a result of photoreceptor arrangement and properties, retinal images are initially
+expressed as a function of position, wavelength, and time
+(see Fig.~\ref{fig:BKG|perception}).
+Yet much information is lost from the outset,
+such as the exact spectral composition of the images \citep{NassiCallaway2009}.
+However, because movement is a feature that distinguishes many items of great
+behavioral relevance, biological vision systems must carry out
+intricate computations that allow an animal
+to infer more abstract attributes about its surroundings,
+such as the 3D form, position, and trajectory of potential predators, prey,
+and mates.
+In doing so, biological visual systems face fundamental problems associated
+with low-level motion processing, 
+such as the correspondence problem and the aperture problem,
+which must be solved in order to provide
+accurate representations of the visual world around them.
+
+
+\subsection{The Correspondence Problem}
+The correspondence problem \citep{Ullman1979}
+refers to the problem of determining
+which image elements belong to the same features
+for two images that are separated in space and/or time
+\citep{PackBorn2008}.
+
+In the brain, this problem might arise in binocular vision, where the images that
+are projected onto the retinas of the left and right eyes are slightly displaced
+relative to each other (``horizontal disparity''), and the brain has to match
+the features in both left and right eyes (i.e., images are separated in space).
+Alternatively, the problem might arise in visual motion perception, where the
+images that are projected onto the retina in one eye differ slightly over time
+(i.e., images are separated in time).
+The correspondence problem is thus a central issue that the visual system 
+must solve in order to derive 3D information.
+
+How exactly this is achieved in the brain is still an active field of research.
+For example regarding binocular disparity, 
+evidence suggests that neurons in early visual areas 
+(such as \ac{V1} \citep{CummingParker1997} or \ac{MT} \citep{Krug1999})
+cannot discard false binocular matches. 
+But, neurons in the highest-order visual area 7a can \citep{Janssen2003}, 
+indicating that the correspondence problem must have been solved somewhere
+along the way. 
+A similar picture has emerged for the correspondence problem in motion perception.
+
+The correspondence problem may also result in false matches, 
+where the luminance
+of a pixel in the second frame happened to correspond to the 
+luminance of a nearby pixel in the first frame \citep{PackBorn2008}.
+Such false matches are inevitable when dealing with inputs that are corrupted by
+noise, jitter, or local image correlations.
+
+The visual system possesses at least two mechanisms for reducing such noise in
+natural images: directional opponency and local pooling.
+Directional opponency is manifested as a suppression of the response
+to nearby stimuli moving in opposite directions, a mechanism that is very common
+in early visual areas \citep{Snowden1991,QianAndersen1994}.
+Subtracting opposite directions of motion is an efficient way to reduce their
+contribution \citep{PackBorn2008}, since many sources of motion noise have
+equal motion energy in all directions (see Section~\ref{sec:BKG|integrationist}
+and Chapter~\ref{ch:ME}).
+Another way to reduce motion noise is to pool local measurements over some region of
+the visual field to produce something like an average of the different local
+motion vectors \citep{LisbergerFerrera1997,Recanzone1997,BrittenHeuer1999}.
+
+
+\subsection{The Aperture Problem}
+\label{sec:BKG|aperture}
+A special case of the correspondence problem 
+is the aperture problem \citep{Marr1982},
+which occurs when a moving pattern is observed through a small window
+or ``aperture'' (see Fig.~\ref{fig:BKG|aperture}).
+Due to the limited field of view, a contour will always appear to
+be moving perpendicular to the edge's orientation (labeled ``visible''
+in Fig.~\ref{fig:BKG|aperture}), 
+because motion components that are parallel to the edge's orientation 
+(labeled ``invisible'' in Fig.~\ref{fig:BKG|aperture})
+do not contain time-varying information.
+As a result, incorrect measurements will occur whenever an edge that is more than
+one pixel in length moves in a direction that is not perpendicular to the
+orientation of the edge \citep{PackBorn2008}.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.9\textwidth]{back_aperture}
+  \caption{
+  The aperture problem (adapted from \cite{BradleyGoyal2008}).
+  \textbf{a}, Even though the rectangle is moving directly to the right
+  (red arrow), it seems to be moving
+  up and to the right when sampled through an aperture (black arrow).
+  \textbf{b}, This is because object velocity can be decomposed into two
+  orthogonal vectors, one perpendicular to the visible edge of the edge and one
+  parallel to it (black vectors). 
+  The parallel vector is invisible because one cannot detect movement 
+  of an edge along its own length; 
+  thus, all we detect is the perpendicular vector.}
+  \label{fig:BKG|aperture}
+\end{figure}
+
+As it turns out, the aperture problem is prevalent especially
+in early stages of the primate visual cortex, 
+because neurons in these areas have extremely limited fields of view.
+Whereas most neurons in \ac{V1} make systematic mistakes when
+signaling the direction of motion of a contour, some neurons in \ac{MT}
+are able to solve the aperture problem \citep{Movshon1985,Pack2001,Rust2006}.
+How neurons in \ac{MT} might perform such computations using known
+biophysical mechanisms will be the topic of Chapter~\ref{ch:MT}.
+
+At a conceptual level, possible approaches to solving the aperture problem
+can be broadly divided into two categories: 
+integrationist models and selectionist models.
+
+
+\subsubsection{Integrationist Models}
+\label{sec:BKG|integrationist}
+In the integrationist category of models, which includes what has become 
+the standard model \citep{Heeger1996,SimoncelliHeeger1998}, 
+the aperture problem is solved in two stages:
+In a first, relatively unintelligent stage, local 1D motion signals
+(labeled ``visible'' components in Fig.~\ref{fig:BKG|aperture}) are
+extracted, which are then combined nonlinearly, at the second stage,
+to recover 2D velocity (labeled ``actual'' in Fig.~\ref{fig:BKG|aperture}).
+In the model proposed by \cite{SimoncelliHeeger1998}, the first stage
+is assigned to motion processing in \ac{V1}, 
+whereas the second stage is assigned to \ac{MT}.
+
+A neuron that suffers from the aperture problem is referred to as
+a \acf{CDS} cell, whereas a neuron that is able to signal the true, actual
+direction of motion is referred to as a \acf{PDS} cell.
+This terminology was introduced by \cite{Movshon1985}, who noticed that
+when these cells were presented with a plaid stimulus consisting of two
+superimposed sine gratings, 
+some neurons preferably responded to the motion of each grating component
+(\ac{CDS} cells), whereas others responded to the global motion pattern
+produced by the combination of the two gratings (\ac{PDS} cells).
+Response properties of these two classes of cells will be discussed in
+detail in Chapter~\ref{ch:MT}.
+
+In the model proposed by \cite{SimoncelliHeeger1998}, each \ac{V1} \ac{CDS} unit 
+is tuned to a relatively narrow range of spatial and temporal frequencies
+(small Gabor patches in Fig.~\ref{fig:BKG|SH}a).
+The aperture problem is solved at the second stage, where \ac{MT} \ac{PDS}
+units collect inputs from many \ac{V1} \ac{CDS} cells of each whose
+orthogonal, 1D speed measurement is consistent with a given 2D velocity
+(Fig.~\ref{fig:BKG|SH}a, c).
+Conceptually, one can think of each 1D measurement as being consistent with 
+a number of possible 2D velocities, all of which must fall on a line 
+in velocity space (dashed lines in Fig.~\ref{fig:BKG|SH}b).
+The intersection of any two of these constraint lines---provided the
+1D measurements have different orientations and belong to the same 
+object---provides the solution of the aperture problem.
+Therefore, this type of model is often referred to as an \acf{IOC} model.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.9\textwidth]{back_ioc}
+  \caption{
+  Integrationist model of pattern direction selectivity in \ac{MT} proposed by
+  \cite{SimoncelliHeeger1998}
+  (reprinted from \cite{PackBorn2008}).
+  \textbf{a}, Partial collection of \acf{V1} inputs
+  to a pattern cell tuned to a velocity of \SI{10}{\degree\per\second} upwards.
+  Each subunit corresponds to the \acf{RF} of a \ac{V1} complex cell.
+  \textbf{b}, Velocity-space representation of the \acf{IOC} calculation.
+  Any 1D velocity measurement (solid arrows) is consistent with a range of 2D
+  velocities falling along a constraint line (dashed lines) perpendicular to its
+  motion vector. For two such measurements made at different orientations, the 2D
+  velocity is given by the point of intersection of the two constraint lines.
+  Conversely, all 1D velocities consistent with a given 2D velocity (hollow arrow) 
+  fall on a circle in velocity space \citep{PackBorn2008}.
+  \textbf{c}, The frequency-space representation of the model depicted in \textbf{a}.}
+  \label{fig:BKG|SH}
+\end{figure}
+
+While the velocity-space construction is conceptually useful, 
+in practice the model is implemented in the spatiotemporal-frequency domain
+(Fig.~\ref{fig:BKG|SH}c).
+Here, the Fourier-transformed visual stimulus is multiplied by the
+frequency-space representations of oriented Gabor filters whose output is
+half-squared (i.e., the negative values are clipped off and the result is squared)
+and normalized to produce a measurement of motion energy \citep{AdelsonBergen1985}
+orthogonal to the orientation of the Gabor.
+When plotted in the 3D space comprised of two dimensions of spatial frequency
+($\omega_x$ and $\omega_y$) and one of temporal frequency ($\omega_t$),
+the selectivity of a given model \ac{V1} neuron appears as a pair of 
+localized blobs positioned symmetrically about the origin, 
+and the different spatial scales of the filters fall along a line 
+passing through the origin 
+\citep{AdelsonBergen1985,Heeger1996,SimoncelliHeeger1998}.
+In this frequency space the locus of points corresponding to a unique 2D velocity
+describes a plane, so a given \ac{MT} cell sums up all of the spatiotemporal blobs
+within the plane consistent with its particular preferred direction and speed
+(see Fig.~\ref{fig:BKG|SH}c).
+
+This model has been highly successful in explaining not only the original
+data that motivated it \citep{Movshon1985,RodmanAlbright1987,RodmanAlbright1989}, but a number of other known \ac{MT} response properties,
+such as responses to random dots embedded in noise
+\citep{Newsome1989,Britten1992}, making it 
+one of the most supported working models of cortical motion processing.
+The development of an efficient, scalable implementation of this model will be
+the topic of Chapter~\ref{ch:ME}.
+
+
+\subsubsection{Selectionist Models}
+In contrast, a second category of models places the emphasis on carefully
+selecting local motion features that do not (or only weakly) suffer from
+the aperture problem, and are thus most indicative of the actual, global
+direction of motion.
+Simply speaking, these features are local regions of the image where multiple
+orientations are present \citep{PackBorn2008}.
+Once the brain has identified the most reliable local motion signals,
+all it has to do is to track them over time in order to compute the true
+2D velocity.
+
+Here, the comparison between orientations happens in a first stage,
+by way of known mechanisms of the visual cortex such as end-stopping
+that suppress 1D motion signals in favor of motion signals emanating from
+2D features.
+The second stage then simply averages the outputs from the first stage
+to compute the final 2D velocity.
+
+% However, are they less biologically plausible? Or are the others just better?
+
+
+\section{Visual Motion Processing in the Mammalian Brain}
+\label{sec:BKG|pathway}
+
+There are at least 32 separate neocortical areas in the mammalian brain
+that are implicated in visual processing \citep{FellemanVanEssen1991}.
+However, not all of these areas are exclusively visual in function.
+Nonvisual contributions include inputs from other sensory modalities
+(such as auditory and somatosensory), visuomotor activity (i.e., related
+to eye movements), and attentional influences \citep{FellemanVanEssen1991}.
+
+It has long been hypothesized that there are at least two distinct major
+pathways (or ``streams'') in the primate brain that process vision
+\citep{UngerleiderMishkin1982,GoodaleMilner1992}:
+the ventral stream (also known as the ``what'' pathway) is involved with
+object recognition, whereas the dorsal stream (also known as the 
+``where'' pathway) is involved with processing the object's spatial location
+relative to the viewer.
+The visual motion pathway is thought to be part of the dorsal stream
+\citep{Britten2008,Orban2008},
+characterized by a preponderance of neurons selective for the speed and
+direction of motion (Fig.~\ref{fig:BKG|pathway}).
+
+Each neuron in the early stages of the primate visual system 
+responds to stimulation over a very small part of the visual field.
+In visual neurophysiology, this limited field of view is called the \ac{RF},
+and most \acp{RF} of the primary visual cortex are smaller than the width of one's
+thumbnail held at arm's length.
+It is useful to think of \acp{RF} as pinholes (or apertures) through which neurons
+view the outside world. Their job is to measure certain aspects of the visual world
+that occur within the pinhole, and they are largely oblivious to events that occur
+outside this small region.
+Within any part of the visual cortex, neurons are found whose \acp{RF} collectively
+tile the whole of visual space.
+In addition to having a spatially delimited \ac{RF}, 
+each neuron has a limited range of visual stimuli to which it will respond.
+Some neurons are tuned to the shape of the stimulus, some to the color, and others
+are tuned to the motion that occurs within their \ac{RF}.
+However, even in the early stages of visual processing, there is much
+lateral and top-down influences on these \acp{RF}.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\textwidth]{back_pathway}
+  \caption{
+  Anatomy of the visual motion pathway in the macaque brain
+  (reprinted from \citep{Britten2008}).
+  \textbf{a}, Simplified schematic of the connections between areas known to
+  play a role in motion analysis. \textbf{b}, Anatomical locations of the areas
+  on a slightly ``inflated'' monkey brain to allow visualization of areas within
+  sulci. The viewpoint is dorsal and lateral. Nomenclature and area boundaries
+  after \cite{FellemanVanEssen1991}; image generated with public domain software
+  CARET (\url{http://brainmap.wustl.edu/caret}; \cite{vanEssen2001}).}
+  \label{fig:BKG|pathway}
+\end{figure}
+
+Early and middle areas in the visual motion pathway,
+such as \ac{V1} and \ac{MT} (yellow and orange tones in
+Fig.~\ref{fig:BKG|pathway}) have small- to medium-sized \acp{RF} and relatively
+simple, linear directional preferences.
+Upper visual areas, most notably \ac{MST} and \ac{VIP}, respond to complex
+motion in relatively large \acp{RF}, which makes them well-suited to process
+visual self-motion.
+In addition, some of these areas also respond to vestibular, somatosensory,
+and auditory stimuli.
+Area 7a is thought to be the highest-order parietal area,
+most important for spatial perception,
+which projects to hippocampus, entorhinal cortex, and various subcortical
+structures.
+
+In this work, we focus on the visual response properties of
+motion-selective neurons in areas \ac{V1}, \ac{MT}, and \ac{MST}.
+
+
+
+\subsection{Retina}
+\label{sec:BKG|retina}
+
+The first steps in seeing begin in the retina, where a dense array
+of photoreceptors convert the incoming pattern of light into an
+electrochemical signal \citep{NassiCallaway2009}.
+As mentioned above, the photoreceptor mosaic encodes the intensity of
+light as a function of retinal position (two dimensions), wavelength,
+and time (see Fig.~\ref{fig:BKG|perception}).
+Owing to the anatomical bottleneck of the optic nerve, retinal output
+must be efficiently condensed.
+The strategy of the mammalian visual system is to reduce the
+representation of the visual scene to a limited number of specialized,
+parallel output channels.
+Rather than sending visual signals from the eye to the brain along
+a homogeneous population of ganglion cells, in the primate at least
+$17$ distinct ganglion cell types exist in the retina,
+and at least $13$ of these project in parallel to the \ac{LGN}
+\citep{Dacey2004}.
+Each ganglion cell is thought to tile the retina, providing a complete
+representation across the entire visual field \citep{FieldChichilnisky2007}.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.8\textwidth]{back_lgn}
+  \caption{
+  Parallel pathways from the retina to the cortex
+  (reprinted from \cite{NassiCallaway2009}).
+  Midget, parasol and bistratified ganglion cells are well characterized 
+  and have been linked to parallel pathways that remain anatomically separate
+  through the \acf{LGN} and the \acf{V1}.}
+  \label{fig:BKG|retinaLGNV1}
+\end{figure}
+
+Midget, parasol, and bistratified ganglion cells
+(see Fig.~\ref{fig:BKG|retinaLGNV1})
+lie at the origin of three distinct, 
+functionally complementary pathways that process 
+red-green color opponency (parvocellular pathway),
+motion (magnocellular pathway),
+and blue-yellow color opponency (koniocellular pathway), respectively
+\citep{NassiCallaway2009}.
+Together they constitute approximately \SI{90}{\percent} of all 
+ganglion cells found in the primate retina
+\citep{Dacey2000,Dacey2004}.
+
+The most important type of retinal cells for motion perception are
+parasol ganglion cells, which convey a broadband, achromatic signal
+to the magnocellular layers of the \ac{LGN}.
+Cells in this pathway typically have large \acp{RF}, high contrast
+sensitivity, fast axonal conduction velocities, and sensitivity to
+high temporal and low spatial frequencies \citep{Dacey2000,NassiCallaway2009}.
+
+Midget ganglion cells, on the other hand,
+convey a red-green color-opponent signal to the
+parvocellular layers of the \ac{LGN}.
+Cells in this pathway typically have small \acp{RF}, low contrast
+sensitivity, slow axonal conduction velocities, and sensitivity to
+high spatial and low temporal frequencies \citep{NassiCallaway2009}.
+
+
+\subsection{Lateral Geniculate Nucleus (LGN)}
+\label{sec:BKG|LGN}
+
+The \acf{LGN} is a relay center in the thalamus for the visual pathway
+and the main central connection for the optic nerve to the occipital lobe.
+In mammals, \ac{LGN} has six layers of gray matter interleaved with
+layers of white matter (see Fig.~\ref{fig:BKG|retinaLGNV1}),
+each layer of neurons having its own characteristic response properties
+and projection targets in the cortex.
+
+This means that at the level of \ac{LGN}, 
+magnocellular, parvocellular, and koniocellular streams 
+remain anatomically segregated.
+Here, signals about visual motion are relayed from parasol
+retinal ganglion cells to layers 4C\textalpha{}  and 6 of \ac{V1} 
+\citep{BlasdelLund1983,ChatterjeeCallaway2003},
+whereas signals about color are relayed from midget retinal ganglion cells
+on to layers 4C\textbeta{} and $6$ of \ac{V1} 
+\citep{Dacey2000,BlasdelLund1983,ChatterjeeCallaway2003}.
+
+
+\subsection{Primary visual cortex (V1)}
+\label{sec:BKG|V1}
+
+Once the condensed and parallel signals from the retina
+and \ac{LGN} arrive in the \acf{V1}, the original components
+of the visual scene must be extracted, elaborated
+on and integrated into a unified percept. The visual
+cortex uses both hierarchical and modular processing
+to accomplish these goals \citep{ZekiShipp1988}.
+
+Early studies suggested there is a clean
+anatomical segregation of magnocellular and parvocellular
+inputs to layers 4B and 2/3 of \ac{V1}, respectively, as well
+as a functional segregation of fast, achromatic responses
+in layer 4B and color-opponent or orientation-selective
+responses in blobs and interblobs, respectively
+\citep{LivingstoneHubel1984,Hawken1988}.
+More recent studies, however, provided evidence for 
+extensive mixing and convergence of magnocellular, parvocellular and 
+koniocellular pathway inputs, suggesting that \ac{V1}
+outputs bear little or no systematic relationship to its parallel inputs
+\citep{SincichHorton2004}.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.8\textwidth]{back_v1}
+  \caption{
+  Example of a directionally selective neuron in \ac{V1} that is projecting to \ac{MT} (reprinted from \cite{MovshonNewsome1996}).
+  Polar plots show the responses of the neuron to a drifting sine grating
+  (\textbf{A}) and drifting plaids (\textbf{B}).
+  Stimuli drifted in one of $16$ directions of motion separated by equal 
+  intervals of \SI{22.5}{\degree}. The plaid stimuli were created by
+  superimposing two sine wave gratings of equal contrast and spatial
+  and temporal frequency, whose orientations differed by \SI{135}{\degree}.
+  The direction of plaid motion is the direction of coherent motion
+  perceived by human observers.
+  The solid lines and data illustrate the actual responses of the neuron;
+  the dashed lines depict the predicted tuning curve if the neuron responded
+  only to the motions of the two component gratings.
+  The small circles at the center of each plot show the spontaneous firing
+  rates.
+  }
+  \label{fig:BKG|V1}
+\end{figure}
+
+Specialized and distinct populations of cells project 
+from layer 4B of \ac{V1} to \ac{MT} or V2.
+\ac{MT} receives input from a population of cells with large cell bodies
+and dense dendritic trees in layer 4B of \ac{V1}, 
+which contain a quick, magnocellular-dominated signal
+\citep{MovshonNewsome1996}.
+These cells are highly functionally specialized and distinct from
+the general population in \ac{V1} 
+(an example cell is shown in Fig.~\ref{fig:BKG|V1}).
+Most of these cells (\SI{80}{\percent}) are stellates, 
+but a smaller number of pyramids (\SI{20}{\percent} of the cells) also
+project to \ac{MT} and are positioned such that their apical dendrites
+can receive magnocellular inputs from layer 4C\textalpha{} 
+\citep{MovshonNewsome1996,NassiCallaway2007}.
+
+
+
+\subsection{Middle Temporal (MT) area}
+\label{sec:BKG|MT}
+
+The \acf{MT} is a region of the extrastriate visual cortex that is
+famous for its role in visual motion processing.
+\ac{MT} is retinotopically organized, each hemisphere containing a
+more-or-less complete map of the contralateral visual hemi-field,
+with a marked emphasis on the fovea
+(the central \SI{15}{\degree} of the visual field occupies over half
+of \ac{MT}'s surface area \citep{vanEssen1981}) and 
+a bias toward the lower quadrant of the visual field
+\citep{MaunsellVanEssen1987}.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.8\textwidth]{back_mt_pathways}
+  \caption{
+  Multiple input streams to \ac{MT} (reprinted from \cite{NassiCallaway2009}).
+  The major ascending input to \ac{MT} passes through magnocellular layers
+  of the \ac{LGN} (yellow) and through layers 4C\textalpha{} and 4B of
+  \ac{V1}, which is the focus of this dissertation.
+  Pathways ascending through V2 and V3 likely provide visual cues about
+  binocular disparity.
+  The thickness of the each arrow represents the approximate strength of the
+  connection.
+  }
+  \label{fig:BKG|MT|pathway}
+\end{figure}
+
+There are multiple input streams from the \ac{LGN} to \ac{MT}
+(see Fig.~\ref{fig:BKG|MT|pathway}).
+The major ascending input to \ac{MT} passes through magnocellular
+layers of the \ac{LGN} (yellow) and through layers 4C\textalpha{} 
+and 4B of \ac{V1}. V2 and V3 provide indirect
+inputs from layers 4C\textalpha{} and 4B of \ac{V1}, with V2 probably
+providing inputs from parvocellular layers of the \ac{LGN} (red)
+and layer 4C\textbeta{} after a small number of additional
+synapses \citep{NassiCallaway2009}. 
+Bypassing layer 4C altogether, a sparse monosynaptic projection 
+from koniocellular layers of the \ac{LGN} (blue) to \ac{MT}
+and a disynaptic projection from magnocellular and parvocellular layers 
+of the \ac{LGN} through layer 6 Meynert cells in \ac{V1} to \ac{MT}
+have both been identified \citep{NassiCallaway2009}. 
+\ac{MT} is likely to use similar strategies to those
+found in \ac{V1} to process these parallel inputs and transform
+their signals into multiple output streams. The thickness of
+each arrow in Fig.~\ref{fig:BKG|MT|pathway} represents the 
+approximate strength of the connection.
+In this work, we focus mainly on the pathway that travels from \ac{LGN}
+through \ac{V1} to \ac{MT}.
+
+The visual responses of \ac{MT} neurons are determined principally
+by five properties of the stimulus (see Fig.~\ref{fig:BKG|MT|response}): 
+retinal positon, direction of motion, speed of motion, binocular disparity, 
+and stimulus size (due to surround suppression) \citep{BornBradley2005}.
+Speed tuning might be approximately log-Gaussian and scale-invariant
+\citep{Nover2005}, whereas direction tuning is broader
+\citep{Duijnhouwer2013}.
+Organization for direction and disparity tuning is columnar,
+but organization for speed tuning is not (only weakly clustered).
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\textwidth]{back_mt}
+  \caption{
+  \ac{MT} response properties.
+  \textbf{a}, Retinal positon.
+  \textbf{b}, Direction of motion.
+  \textbf{c}, Speed of motion.
+  \textbf{d}, Binocular disparity.
+  \textbf{e}, Stimulus size (due to surround suppression).
+  Panel \textbf{c} reprinted from \cite{Nover2005}, all others reprinted from
+  \cite{BornBradley2005}.}
+  \label{fig:BKG|MT|response}
+\end{figure}
+
+\ac{MT} \acp{RF} are up to ten times larger than \acp{RF} in \ac{V1}
+\citep{Raiguel1995}.
+In some neurons, stimulus selectivity varies drastically in different 
+subfields of the \ac{RF} \citep{Richert2013}.
+About half of the neurons in \ac{MT} have receptive field with
+antagonistic surrounds \citep{Allman1985,Raiguel1995}, and these
+surrounds can come in one of several shapes 
+(see Fig.~\ref{fig:BKG|MT|response}e).
+In general, the surround effects are such that maximal suppresion occurs
+when the surround stimulus moves in the same direction and at the same
+disparity as that in the center \citep{Allman1985}.
+As such, the center-surround apparatus can act as a differentiator over
+direction and depth, allowing some \ac{MT} neurons to sense motion gradients
+and act as a motion salience detector \citep{BornBradley2005}.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.8\textwidth]{back_mst}
+  \caption{
+  Different types of motion signals processed by \ac{MT} and
+  its satellites
+  (adapted from \cite{Orban2008}).}
+  \label{fig:BKG|MST|pathway}
+\end{figure}
+
+The signals from MT are sent in parallel to a number of neighboring regions
+(see Fig.~\ref{fig:BKG|MST|pathway},
+including \acf{MSTd} for processing of self-motion, 
+\acf{MSTv} for processing of trajectories of moving objects as well as
+generating smooth pursuit eye movements,
+and \acf{FST} for processing of actions and motions of animate entities
+\citep{Orban2008}.
+Interestingly, \ac{MT} neurons with antagonistic surrounds mostly project
+to \ac{MSTv} and \ac{FST}, but not to \ac{MSTd} \citep{BerezovskiiBorn2000}.
+
+\subsection{Middle Superior Temporal (MST) area}
+\label{sec:BKG|MST}
+
+\afterpage{%
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.8\textwidth]{back_mstd}
+  \caption{
+  3D heading tuning in \ac{MSTd} (reprinted from \cite{Gu2006}).
+  \textbf{A}, Data from a neuron with congruent tuning for heading
+  defined by visual and vestibular cues. Color contour maps show the mean
+  firing rate as a function of azimuth and elevation angles. Each contour 
+  map shows the Lambert cylindrical equal-area projection of the original
+  spherical data \citep{Snyder1987}. 
+  In this projection, the ordinate is a sinusoidally transformed version 
+  of elevation angle. Tuning curves along the margins of each color map
+  illustrate mean SEM firing rates plotted as a function of either 
+  elevation or azimuth (averaged across azimuth or elevation, respectively).
+  \textbf{B}, Distributions of 3D heading preferences of \ac{MSTd} neurons.
+	Each data point in the scatter plot corresponds to the preferred azimuth
+    (abscissa) and elevation (ordinate) of a single neuron with significant
+    heading tuning.
+  \textbf{C}, Definitions of azimuth and elevation angles used to define
+  heading stimuli in 3D.
+  }
+  \label{fig:BKG|MSTd|heading}
+\end{figure}
+\clearpage
+}
+
+The \ac{MST} receives its main input from neurons in \ac{MT}
+\citep{UngerleiderDesimone1986}.
+Whereas neurons in \ac{MSTv} are involved in the analysis of visual
+trajectories of relatively small objects and the generation of
+smooth pursuit eye movements, 
+neurons in \ac{MSTd} respond to relatively large and complex patterns of
+retinal flow, implying a role in the analysis of self-motion
+\citep{Saito1986, TanakaSaito1989, DuffyWurtz1991a, DuffyWurtz1991b, Gu2010,
+Gu2012}.
+
+The visual processing of \ac{MSTd} neurons has been summarized as a
+template matching with radial motion, rotation, and translation,
+or their combinations \citep{Orban2008}.
+Because expansion/contraction and rotation are basically spatial
+configurations of local translations of the observer, \ac{MSTd} has been
+implicated with the analysis of optic flow during self-movement; 
+that is, with the analysis of apparent motion in a visual scene
+caused by the relative movement of the observer.
+Indeed, recording from \ac{MSTd} in a macaque while the animal is physically
+moving along trajectories in 3D space revealed that nearly all neurons in
+\ac{MSTd} were selective to at least one of these directions of travel
+(or ``headings'') \citep{Gu2006,Takahashi2007}.
+In contrast to earlier studies
+\citep{DuffyWurtz1991a,DuffyWurtz1991b,Graziano1994},
+all directions of heading in space seem to be (roughly) equally 
+represented in \ac{MSTd} (see Fig.~\ref{fig:BKG|MSTd|heading}):
+there is no preference for straight-ahead trajectories or trajectories
+along the ground plane.
+
+However, neurons in \ac{MSTd} are not just selective for heading,
+but often prefer a mixture of translational, rotational, 
+and to a lesser degree deformational flow components
+\citep{DuffyWurtz1991a,DuffyWurtz1991b,Graziano1994,Mineault2012},
+with receptive fields that can encompass up to 
+$\SI{40}{\degree} \times \SI{40}{\degree}$ of the visual field \citep{Raiguel1997}.
+
+Besides pure retinal signals, neurons in \ac{MSTd} are also driven by
+vestibular \citep{PageDuffy2003,Gu2006,Takahashi2007,Gu2010}
+and eye movement-related signals \citep{KomatsuWurtz1988,Newsome1988}.
+Hence, \ac{MSTd} could contain a number of visual motion-related variables
+\citep{BenHamed2003},
+ranging from pure retinal to head-centered stimulus velocity coding
+\citep{ChukoskieMovshon2009,Yu2010,Brostek2014}
+that include intermediate reference frames \citep{Fetsch2007}.
+Finally, some neurons are selective not just for heading, but also for
+path and place \citep{FroehlerDuffy2002,Page2015}.
+
+
+\subsection{Visual Motion Processing Beyond MST}
+
+The dorsal pathway consists of a large number of interconnected
+extrastriate cortical areas in the parietal cortex
+downstream of \ac{MT}, including \ac{MST}, \ac{FST}, the
+Superior Temporal Polysensory (STP) area,
+\acf{VIP}, \acf{LIP}, and visual area 7a, to name just a few
+\citep{Andersen1990,Boussaoud1990,LewisVanEssen2000,MaunsellVanEssen1983}.
+Motion processing gets increasingly complex in these areas, involving
+not just visual but also vestibular, somatosensory, and auditory signals.
+Collectively, these higher-order parietal areas might be involved in
+all things related to spatial planning, including the coordination and planning
+of locomotion, eye movements (i.e., saccades and smooth pursuit),
+head movements, and arm movements (i.e., reaching).
+Evidence indicates that at this stage, the dorsal stream might
+actually branch out into two relatively segregated circuits
+\citep{RizzolattiMatelli2003}, but motion processing in these areas
+remains an active field of research to this day.
+
+
+\section{Approaches to Modeling the Brain}
+\label{sec:BKG|approaches}
+
+Because of the brain's sheer complexity, it is important to choose
+an appropriate abstraction level when designing a model of brain function
+(see Fig.~\ref{fig:BKG|abstractionLevels}).
+Each level of abstraction serves a different purpose, from
+theoretical models designed to understand the statistics of sensory data
+and expressing cortical function as high-level mathematical principles
+(``systems neuroscience'') to
+cellular models that aim to include as much biological detail as possible,
+ranging from molecular, electrical, to morphological properties of neurons 
+and synapses.
+Of course, although the latter type of models are biologically accurate, 
+they incur tremendous computational costs for simulation,
+limiting the size and complexity of the network that can be simulated.
+
+Neural circuit models constitute a compromise between 
+accuracy and simulation complexity
+by abstracting away many molecular and cellular details
+of a neuron.
+This type of models considers the brain as a massive circuit
+composed of four basic components: neurons for computation,
+synapses for learning and memory storage,
+axons for communication,
+and neuromodulatory systems for modeling state
+\citep{FurberTemple2007,AbbottNelson2000,Brette2007}.
+Models of this type are well-suited to study neural circuits at
+the micro scale ($10^2-10^4$ neurons) and 
+meso scale ($10^4-10^7$ neurons), as they are able to exhibit 
+a variety of empirically observed network dynamics such as
+random asynchronous firing,
+oscillatory (synchronous) firing,
+sustained responses to transient stimuli,
+and chaotic network activity.
+Such networks are complex dynamical systems involving the numerical
+integration of many thousands of coupled differential equations
+\citep{Vogels2005}.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.5\textwidth]{back_abstraction}
+  \caption{
+  Possible levels of modeling abstraction 
+  (adapted from \cite{Nageswaran2010}).}
+  \label{fig:BKG|abstractionLevels}
+\end{figure}
+
+In order to make the simulation of such networks feasible,
+a common compromise is to use a relatively simple neuron model to
+model each node in the network, using either firing-rate or
+spiking neurons.
+In biological neurons, brief electrical pulses 
+(called action potentials or spikes) travel along a wire (axon) to the
+connection site (synapse) of another neuron, where they cause a small
+change in the electric membrane potential of the receiving neuron
+\citep{Kandel2000}.
+Neurons integrate these small changes until their voltage reaches a
+threshold, at which point the neuron is said to fire a spike.
+Firing-rate neurons describe the activity of each neuron as the sum of
+spikes over a given time interval (i.e., firing rate),
+whereas spiking neurons model the actual temporal evolution of
+each neuron's membrane potential.
+
+\subsection{Firing-Rate Networks}
+\label{sec:BKG|rateModel}
+In a firing-rate network, each neuron $j$ is described 
+at time $t$ by a firing rate $r_j(t)$ that relaxes with a time constant
+$\tau_r$ to a steady-state value given by a function $F$ that describes
+the relationship between firing rate and input current $i(t)$ for the neuron
+\citep{Vogels2005}:
+\begin{equation}
+\tau_r \frac{dr_j}{dt} = -r_j(t) + F(i(t)).
+\label{eqn:BKG|rateNeuron}
+\end{equation}
+Here, $i(t)$ is the sum of the input from sources outside the network
+such as sensory input, and the sum of inputs from other neurons within
+the network.
+The assumption behind Eq.~\ref{eqn:BKG|rateNeuron} is that, on average,
+the input from a given presynaptic neuron is proportional to its firing
+rate, which is only true for some neuron types
+(refer to Section~\ref{sec:BKG|Izh}).
+
+
+\subsection{Spiking Neural Networks (SNNs)}
+\label{sec:BKG|SNN}
+
+An alternative is to use a model of spiking neurons to capture
+(to a varying degree) properties of the neuronal and synaptic state.
+In contrast to firing-rate models, which describe neuronal activity as the
+average firing rate of a neuron as a function of its inputs, \acf{SNN} models
+use an explicit representation of spike timing \citep{MaassBishop2001,Brette2007},
+leading to inherently event-driven communication protocols.
+
+One of the most widely used spiking models in computational neuroscience is
+the \ac{LIF} neuron:
+\begin{align}
+	\frac{dv}{dt} & = I + a - bv, \label{eqn:BKG|LIF} \\
+    v(v > v_{\textrm{thresh}}) & = c
+\end{align}
+where $v$ is the membrane potential, $I$ is the input current, and $a$, $b$,
+$c$, and $v_{\textrm{thresh}}$ are the parameters.
+When the membrane potential $v$ reaches the threshold value $v_{\textrm{thresh}}$,
+the neuron is said to fire a spike, and $v$ is reset to $c$.
+Due to its simplicity, the \ac{LIF} is computationally efficient. 
+It can fire tonic spikes with constant frequency, but it cannot
+exhibit some of the more sophisticated dynamics observed in biological neurons,
+such as phasic spiking, bursting, rebound responses, threshold variability,
+bistability of attractors, or autonomous chaotic dynamics \citep{Izhikevich2004a}.
+
+Because other spiking neuron models exist that are more biologically plausible,
+it has been argued that these models might be better suited 
+than \ac{LIF} neurons to study how the mammalian neocortex processes
+spatiotemporal information \citep{Izhikevich2004a}.
+One of the most important models in computational neuroscience is the
+Hodgkin-Huxley neuron model \citep{HodgkinHuxley1954}, 
+which consists of four equations and tens of parameters,
+accurately describing single-cell dynamics 
+with respect to synaptic integration,
+dendritic cable filtering, and effects of dendritic morphology.
+However, it is extremely computationally expensive to implement.
+
+An interesting compromise between the computational efficiency of the \ac{LIF}
+model and the biological fidelity of the Hodgkin-Huxley model is the
+Izhikevich spiking model \citep{Izhikevich2003} 
+(see Fig.~\ref{fig:BKG|spikingModels}).
+Using only two coupled \acp{ODE}, the model is computationally efficient 
+yet exhibits complex neuronal dynamics that closely mimic biological neurons.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.9\textwidth]{back_spiking}
+  \caption{
+  Comparison of different neuro-computational properties of spiking and
+  bursting models~\citep{Izhikevich2004a}.
+  ``\# of FLOPS'' is an approximate number of floating point operations
+  needed to simulate the model during a \SI{1}{\milli\second} time span.}
+  \label{fig:BKG|spikingModels}
+\end{figure}
+
+
+\subsubsection{Izhikevich Spiking Neurons}
+\label{sec:BKG|Izh}
+
+The Izhikevich model aims to reduce
+Hodgkin-Huxley-type neuronal models to a two-dimensional
+system of \acp{ODE}:
+\begin{align}
+\frac{dv(t)}{dt} & = 0.04v^2+5v(t)+140-u(t)+i_{\textrm{syn}}(t) 
+	\label{eqn:BKG|Izh|IzhVoltage} \\
+\frac{du(t)}{dt} & = a \big(b v(t) - u(t)\big) 
+	\label{eqn:BKG|Izh|IzhRecovery} \\
+v(v>v_{\textrm{cutoff}}) & = c 
+	\textrm{   and   } u(v>v_{\textrm{cutoff}}) = u-d.
+	\label{eqn:BKG|Izh|IzhReset}
+\end{align}
+
+Here, Eq.~\ref{eqn:BKG|Izh|IzhVoltage}
+describes the membrane potential $v$ for a given
+synaptic current $i_{\textrm{syn}}$, 
+whereas Eq.~\ref{eqn:BKG|Izh|IzhRecovery}
+describes a recovery variable $u$;
+the parameter $a$ is the rate constant of the recovery variable,
+and $b$ describes the sensitivity of the recovery variable to the
+subthreshold fluctuations of the membrane potential. Whenever
+$v$ reaches peak ($v_{\textrm{cutoff}} = +30$), 
+the membrane potential is reset to $c$ and the 
+value of the recovery variable is decreased by $d$
+(see Eq.~\ref{eqn:BKG|Izh|IzhReset}).
+The inclusion of $u$ in the model allows for the simulation
+of typical spike patterns observed in biological neurons. The four
+parameters $a$, $b$, $c$, and $d$ can be set to simulate 
+different types of neurons (see Fig.~\ref{fig:BKG|izhTypes}).
+The most common type of excitatory neuron in mammalian neocortex,
+the \acf{RS} cell, fires tonic spikes with decreasing frequency, as in
+Fig.~\ref{fig:BKG|izhTypes}a (class 1 excitability).
+Other neurons---such as some local inhibitory interneurons---cannot fire 
+low-frequency spike trains, thus are either quiescent or fire a train at
+relatively large frequency, as in Fig.~\ref{fig:BKG|izhTypes}h.
+
+\afterpage{%
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.8\textwidth]{back_izh_types}
+  \caption{
+  Summary of the neuro-computational properties of biological spiking neurons,
+  simulated with the Izhikevich neuron model \citep{Izhikevich2004a}.
+  Each horizontal bar denotes a \SI{20}{\milli\second} time interval.}
+  \label{fig:BKG|izhTypes}
+\end{figure}
+\clearpage
+}
+
+
+% FIXME this has some specific parameter values in it...
+\subsubsection{Synapses}
+
+In this type of neural-circuit models, ionic currents are typically
+modeled as dynamic synaptic channels with zero rise time
+and exponential decay:
+\begin{equation}
+\frac{dg_r(t)}{dt} = -\frac{1}{\tau_r} g_r(t) + \eta_r w
+	\sum_i \delta(t-t_i),
+\label{eqn:BKG|Izh|current}
+\end{equation}
+where $g_r$ is the synaptic conductance,
+$\eta_r$ is a receptor-specific efficacy (or ``synaptic gain''),
+$w$ is the weight of the synapse,
+$\delta$ is the Dirac delta, 
+the sum is over all presynaptic spikes arriving at time $t_i$,
+and the subscript $r$ denotes the receptor type.
+The most prominent receptor types in the mammalian brain include
+AMPA (fast decay, $\tau_{\textrm{AMPA}} = \SI{5}{\milli\second}$), 
+NMDA (slow decay and voltage-dependent, 
+$\tau_{\textrm{NMDA}} = \SI{150}{\milli\second}$), 
+GABAa (fast decay, 
+$\tau_{\textrm{GABAa}} = \SI{6}{\milli\second}$),
+and  GABAb (slow decay, 
+$\tau_{\textrm{GABAb}} = \SI{150}{\milli\second}$)
+\citep{Izhikevich2004b}.
+Typically, a spike arriving at a synapse that is post-synaptically
+connected to an excitatory (inhibitory) neuron increases both
+$g_{\textrm{AMPA}}$ and $g_{\textrm{NMDA}}$ 
+($g_{\textrm{GABAa}}$ and $g_{\textrm{GABAb}}$).
+Receptor-specific efficacies may vary depending on which brain area
+(and cortical layer) is being modeled. 
+However, $\eta_{\textrm{AMPA}}$ is often greater than
+$\eta_{\textrm{NMDA}}$ \citep{Myme2003}.
+
+The total synaptic current $i_{\textrm{syn}}$ in
+Eq.~\ref{eqn:BKG|Izh|IzhVoltage} is then given as:
+\begin{align}
+i_{\textrm{syn}} & = - g_{\textrm{AMPA}}(v-0) \nonumber \\
+	& - g_{
+    	\textrm{NMDA}} \frac{ \big( \frac{v+80}{60} \big)^2
+    }{
+    	1 + \big( \frac{v+80}{60} \big)^2
+    } (v-0) \nonumber \\
+    & -  g_{\textrm{GABAa}}(v+70) \nonumber \\
+    & -  g_{\textrm{GABAb}}(v+90).
+\label{eqn:BKG|Izh|receptors}
+\end{align}
+
+
+\subsubsection{Synaptic Plasticity}
+\label{sec:BKG|plasticity}
+
+Synapses in the brain can also undergo plasticity, 
+where they change their efficacy or weight strength 
+according to recent presynaptic and postsynaptic activity.
+
+Synaptic plasticity was first proposed as a mechanism 
+for learning and memory on the basis of theoretical analysis 
+\citep{Hebb1949}, who postulated that when one neuron drives the
+activity of another neuron, the connection between these neurons is
+potentiated.
+Hebbian learning describes the change in the $i$-th weight strength, 
+$\Delta w_i$, as:
+\begin{equation}
+\Delta w_i = \eta x_i y, \label{eqn:BKG|plasticity|Hebb}
+\end{equation}
+where $\eta$ is the learning rate, $x_i$ is the $i$-th input to the neuron,
+and $y$ is the neuron's postsynaptic response.
+This principle became later known as 
+``Cells that fire together, wire together''.
+
+The principle of Hebbian-like synaptic potentiation was later
+supplemented with the complementary principle of synaptic depression
+between two neurons that are not sufficiently coactive
+\citep{Stent1973,Sejnowski1977}.
+The experimental correlates of these theoretically proposed forms
+of synaptic plasticity are called \acf{LTP} and \acf{LTD}
+\citep{Song2000,BiPoo2001}, and together
+form an update rule called \acf{STDP}:
+\begin{equation}
+\frac{dw_{i,j}}{dt} = \delta + \beta(\mathrm{LTP}_{i,j} + \mathrm{LTD}_{i,j}),
+\label{eqn:BKG|plasticity|STDP}
+\end{equation}
+where $w_{i,j}$ is the synaptic weight from presynaptic neuron $i$ to
+postsynaptic neuron $j$, 
+$\beta$ is the learning rate, and
+$\delta$ is a bias often set to zero or a positive to push the network towards
+positive weight increases for low synaptic input.
+
+Although prevalent in cortical synapses, the model presented in this
+thesis does not attempt to model synaptic plasticity.
+However, Chapter~\ref{ch:MSTd} describes a computational principle that might
+be the result of synaptic plasticity mechanisms in the brain
+\citep{Carlson2013}.
+Synaptic plasticity may be included in future iterations of the model
+presented in this thesis (see Chapter~\ref{ch:conclusion}).
+

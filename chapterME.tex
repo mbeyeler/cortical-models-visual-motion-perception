@@ -1,0 +1,579 @@
+\chapter{CUDA Implementation of the Motion Energy Model}
+\label{ch:ME}
+
+\section{Introduction}
+% Visual motion perception is a challenging problem that is
+% critical for navigating through the environment and tracking objects. 
+Several software packages are available to the public
+that deal with the neurobiologically plausible modeling of
+motion perception in the mammalian brain, such as
+spatiotemporal-energy models like the motion energy model
+of \cite{SimoncelliHeeger1998} (see Section~\ref{sec:BKG|integrationist}),
+or gradient-based models
+like ViSTARS~\citep{Browning2009a,Browning2009b}.
+However, in order
+for these frameworks to become practical in, for example,
+neuromorphic or robotics applications, they must be capable
+of running large-scale networks in real time.
+Yet real-world integration is often prohibited due
+to engineering requirements, programming intricacies, and the
+sheer computational cost that come with large-scale biological
+models. Instead, such models often find application only in
+constrained or virtual environments, which may severely limit
+their explanatory power when it comes to generalizing findings to
+real-world conditions.
+
+In this chapter I describe an efficient software implementation
+of the motion energy model~\citep{SimoncelliHeeger1998},
+one of the most supported cortical models for visual motion processing.
+After a rigorous mathematical treatment of the motion energy model 
+(henceforth referred to as the S\&H model),
+I will discuss details of the new implementation, and compare its 
+computational performance to Simoncelli and Heeger's own C/MATLAB based code.
+By leveraging the parallel processing capabilities of \acp{GPU}, 
+I aim to develop a \ac{CUDA} implementation of the S\&H model 
+that can handle constant video streams ($\sim 360 \times 480$ pixels)
+of up to $30$ frames per second in (near) real time,
+which will play a key role in enabling the practical feasibility of the empirical
+studies described in the following chapters.
+
+
+
+\section{Spatiotemporal-Energy Model of V1}
+\label{sec:ME|V1}
+
+As described in Section~\ref{sec:BKG|integrationist},
+the S\&H model belongs to the ``integrationist'' class of models,
+which solve the aperture problem in two stages: 
+In a first stage (assigned to motion processing in \ac{V1}), 
+local 1D motion signals are extracted.
+In the second stage (assigned to motion processing in \ac{MT}), these signals
+are combined nonlinearly to recover 2D velocity.
+
+In the following I will concentrate on the \ac{V1} stage, 
+which transforms a series of image frames into simulated neural activity
+that is modulated by the direction and speed of local motion.
+At the end of the \ac{V1} stage, the model is conceptually equivalent to an
+elaborated Reichardt detector~\citep{vanSanten1985}.
+How signals from \ac{V1} can be combined in \ac{MT} to recover 2D velocity, 
+by relying solely on dynamics and properties gleaned from known 
+electrophysiological and neuroanatomical evidence, will be the
+focus of Chapter~\ref{ch:MT}.
+
+
+\subsection{Input Stimuli}
+\label{sec:ME|V1|input}
+Input to the S\&H model is a visual stimulus that is
+represented as a light intensity distribution $I(x,y,t)$,
+which is a function of two spatial dimensions $(x,y)$ and time $t$.
+
+Typically, a visual stimulus is processed at different spatiotemporal
+resolutions (or scales), $r$, in order to extract motion cues that are 
+invariant to feature size.
+In the following we will consider three different scales.
+The first scale, $r=0$, was equivalent to processing at the
+original image (and time) resolution. The other two scales ($r=1$ and $r=2$)
+were achieved by successively blurring the image with a Gaussian
+kernel. The three stimuli $I_r(x,y,t)$ can thus be expressed as:
+\begin{align}
+I_0(x,y,t) & = I(x,y,t) \label{eqn:ME|SH|stimuli1} \\
+I_1(x,y,t) & = \exp\bigg( \frac{-(x^2+y^2+t^2)}{2}\bigg)
+	* I_0(x,y,t) \label{eqn:ME|SH|stimuli2} \\
+I_2(x,y,t) & = \exp\bigg( \frac{-(x^2+y^2+t^2)}{2}\bigg)
+	* I_1(x,y,t), \label{eqn:ME|SH|stimuli3}
+\end{align}
+where $*$ denotes convolution.
+In order to circumvent the noncausality
+of these convolutions (i.e., where the response depends both on
+past and future stimulus intensities), a time delay of four
+frames was introduced (see \cite{SimoncelliHeeger1998}).
+
+
+\subsection{V1 Simple Cells}
+\label{sec:ME|V1|simple}
+
+A large body of research has found that
+neurons located in V1 that project to MT are directionally
+selective and may be regarded as local motion energy 
+filters~\citep{AdelsonBergen1985,DeAngelis1993,MovshonNewsome1996}.
+In our network, \ac{V1} simple cells are
+modeled as linear space-time oriented filters whose receptive
+fields are third derivatives of a Gaussian~\citep{SimoncelliHeeger1998}.
+These filters are very similar to a Gabor filter,
+but more computationally convenient as they allow for separable
+convolution computations.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\textwidth]{me_rf}
+  \caption{
+  A drifting dot traces out a path (dashed line) in space
+  ($x$, ignoring $y$) and time ($t$).
+  The colored ovals correspond to the orientation of the positive
+  (green) and negative (red) lobes of a spatiotemporal filter.
+  \textbf{A}, If the filter is oriented in the same way as the
+  dot's space-time path, it could be activated by this motion.
+  \textbf{B}, A dot moving in the opposite direction would always
+  contact both positive and negative lobes of the filter and
+  therefore could never produce a strong filter response.
+  %\FIXME
+  Adapted from \cite{BradleyGoyal2008}.}
+  \label{fig:ME|SH|RF}
+\end{figure}
+
+An example of a spatiotemporal receptive field is illustrated
+in Fig.~\ref{fig:ME|SH|RF}, where the colored
+ovals correspond to the orientation of the positive (green) and
+negative (red) lobes of the spatiotemporal filter. If a drifting
+dot traces out a path (dashed line) in space ($x$, for now ignoring
+$y$) and time ($t$) that is oriented in the same way as the lobes,
+then the filter could be activated by this motion
+(Fig.~\ref{fig:ME|SH|RF}A).
+A dot moving in the orthogonal direction would not elicit a filter
+response because its path intersects both positive and negative
+lobes of the filter (as depicted in Fig.~\ref{fig:ME|SH|RF}B).
+
+The full set of \ac{V1} linear receptive fields consisted of $28$
+space-time orientations that are evenly distributed on the
+surface of a sphere in the spatiotemporal frequency domain
+(Fig.~\ref{fig:BKG|SH}).
+The $k$-th space-time oriented filter in the V1 population can be
+described by a unit vector
+$\vec{u}_k = (u_{k,x}, u_{k,y}, u_{k,t})'$
+that is parallel
+to the filter orientation, where $k=1, 2, \ldots, 28$, and $'$ denotes
+vector transposition. For more information please refer to
+\cite{SimoncelliHeeger1998}.
+
+First, input images were filtered with a 3D Gaussian corresponding
+to the receptive field size of a \ac{V1} simple cell:
+\begin{equation}
+f_r(x,y,t) = \exp\bigg(
+	\frac{-(x^2+y^2+t^2)}{2\sigma^2_{\textrm{v1simple}}}\bigg)
+    * I_r(x,y,t),
+\label{eqn:ME|SH|filter}
+\end{equation}
+where $*$ is the convolution operator, $r$ denotes the scale, and
+$\sigma_{\textrm{v1simple}} = 1.25$~pixels.
+
+Then the underlying linear response of a simple cell at
+spatial location $(x,y)$ and scale $r$ with space-time orientation
+$k$ is equivalent to the third-order derivative in the direction of
+$\vec{u}_k$; that is,
+\begin{equation}
+L_{k,r}(x,y,t) = \alpha_{\mathrm{v1lin}} \sum_{T=0}^3 \Bigg[
+	\sum_{Y=0}^{3-T} \bigg[ \frac{3!}{X!\, Y!\, T!} 
+    \Big( u_{k,x} \Big)^X
+    \Big( u_{k,y} \Big)^Y
+    \Big( u_{k,t} \Big)^T
+    \frac{\partial^3 f_r(x,y,t)}{\partial x^X \partial y^Y
+    	\partial t^T}
+    \bigg] \Bigg],
+\label{eqn:ME|SH|linearSum}
+\end{equation}
+where $!$ denotes the factorial, $X=3-Y-T$, and
+$\alpha_{\textrm{v1lin}} = 6.6084$ is
+a scaling factor. Note that the two sums combined yield
+exactly $28$ summands. This operation is equivalent to Eq.~$2$
+in the original paper, and can also be expressed using vector
+notation:
+\begin{equation}
+\vec{L}_r = \alpha_{\textrm{v1lin}}\, \textbf{M}\, \vec{b}_r,
+\label{eqn:ME|SH|linearMatrix}
+\end{equation}
+where $\vec{L}_r$ is the set of all $k$ V1 responses at scale $r$,
+each element of $\vec{b}_r$ is one of the separable
+derivatives in Eq.~\ref{eqn:ME|SH|linearSum} at scale $r$,
+and each element of the $28\times28$ matrix $\textbf{M}$
+is a number
+$3!/(X!\, Y!\, T!) \big(u_{k,x}\big)^X
+	\big(u_{k,y}\big)^Y
+    \big(u_{k,t}\big)^T$.
+Each row of $\textbf{M}$ has a different value for $k$,
+and each column of $\textbf{M}$ has different
+values for $X$, $Y$, and $T$.
+I will make use of this notation in Section~\ref{sec:ME|V1|complex}, where I
+will explain the construction of synaptic projections from \ac{V1} simple cells
+to \ac{V1} complex cells.
+
+At this stage of the model it is possible that filter responses
+$\mathbf{L}_{k,r}$ at positions $(x,y)$ close to the image border 
+have become unreasonably large.
+These edge effects can be suppressed by applying a scaling factor
+to $\mathbf{L}_{k,r}$ whenever $(x,y)$ is near an image border.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\textwidth]{me_v1}
+  \caption{
+  \ac{V1} simple cell responses are generated from a visual stimulus
+  (such as a field of randomly moving dots) by applying a bank of linear
+  spatiotemporal filters, a half-square operation, and divisive normalization.}
+  \label{fig:ME|SH|V1}
+\end{figure}
+
+Simple cell responses can then be constructed by half-squaring
+and normalizing the linear responses $\mathbf{L}_{k,r}$ from
+Eq.~\ref{eqn:ME|SH|linearSum} within a large Gaussian envelope
+(Fig.~\ref{fig:ME|SH|V1}).
+Critically, the normalization process implements a division operation,
+which allows for a close approximation of maximum likelihood estimation
+\citep{Deneve1999}, and is a ubiquitous operation in the brain
+\citep{CarandiniHeeger2012}.
+
+A simple cell response was then described as follows:
+\begin{equation}
+S_{k,r}(x,y,t) = 
+	\frac{
+    	\alpha_{\textrm{filt}\rightarrow\textrm{rate}, r}
+        \alpha_{\textrm{v1rect}} L^2_{k,r}(x,y,t)
+    }{
+    	\alpha_{\textrm{v1norm}}
+        \exp \Big( \frac{-(x^2+y^2)}{2\sigma_{\textrm{v1norm}}^2} \Big)
+        * \Big( \frac{1}{28} \sum_{k=1}^{28} L^2_{k,r}(x,y,t) \Big)
+        +\alpha_{\textrm{v1semi}}^2
+    }
+\label{eqn:ME|SH|simple}
+\end{equation}
+where $*$ is the convolution operator.
+The scaling factors $\alpha_{\textrm{v1rect}}=1.9263$ and
+$\alpha_{\textrm{v1semi}}=0.1$ (the semi-saturation constant) 
+had the same values as in the original S\&H model.
+Instead of having a single global
+normalization, our normalization occurs within a large spatial
+neighborhood (Gaussian half-width $\sigma_{\textrm{v1norm}}=3.35$~pixels),
+which is thought to be more biologically realistic. Therefore
+the scaling factor 
+$\alpha_{\textrm{v1norm}}=1.0$
+had to be adjusted to compensate for the implementation difference.
+This was done simultaneously
+by setting
+$\alpha_{\textrm{filt}\rightarrow\textrm{rate}, r} = \SI{15}{\hertz}$,
+a scaling factor to map the unit-less filter responses
+at each scale $r$ onto more meaningful
+mean firing rates, as will be explained below. In brief,
+we opted to reproduce the contrast sensitivity function reported
+for V1 cells projecting to MT~\citep{MovshonNewsome1996}.
+Other than that, the computation in Eq.~\ref{eqn:ME|SH|simple}
+is conceptually equivalent to Eqs. $3$--$4$ in \cite{SimoncelliHeeger1998}.
+
+
+
+\subsection{V1 Complex Cells}
+\label{sec:ME|V1|complex}
+
+V1 complex cell responses were computed as
+local weighted averages of simple cell responses,
+
+\begin{equation}
+C_{k,r}(x,y,t) = \alpha_{\textrm{v1comp}}
+	\exp \Big( \frac{-(x^2+y^2}{2\sigma_{\textrm{v1comp}}^2} \Big)
+    \: w_{k,r,\vec{\psi}}\: S_{k,r}(x,y,t),
+\label{eqn:ME|SH|complex}
+\end{equation}
+
+where the half-width of the Gaussian was 
+$\sigma_{\textrm{v1comp}}=1.6$,
+$\alpha_{\textrm{v1comp}}=0.1$ was a scaling factor,
+and $w_{k,r,\vec{\psi}}$ was a weight value as follows.
+
+In order to arrive at \ac{V1} complex cells that are tuned for a
+particular direction and speed of motion, filter responses
+needed to be ``steered'' into a specific direction.
+\cite{FreemanAdelson1991} showed that the response of an arbitrarily oriented
+filter could be synthesized from a fixed bank of basis filters 
+(such as the $28$ \ac{V1}-like filters described above).
+Thus the projection weights from \ac{V1} simple cells to \ac{V1} complex cells,
+$w_{k,r,\vec{\psi}}$, could be interpolated as follows.
+Let $\vec{\psi} = (\psi_x,\psi_y,\psi_t)'$ be the unit vector parallel to
+an arbitrary space-time orientation (i.e., direction and speed of motion),
+akin to the unit vectors $\vec{u}_k$ in Eq.~\ref{eqn:ME|SH|linearSum}.
+Then we can write the third directional derivative in direction of $\vec{\psi}$
+analogously to Eq.~\ref{eqn:ME|SH|linearSum} as:
+\begin{align}
+\frac{\partial^3 f_r}{\partial \vec{\psi}^3} & =
+	\Big[ \alpha_{\textrm{collapse}}\, \textbf{M}^{-1} \Big]
+    \vec{b}_r \\
+    & = \vec{w}_{\vec{\psi}}\: \vec{b}_r,
+\label{eqn:ME|SH|interpolation}
+\end{align}
+where the matrix \textbf{M} and the vector $\vec{b}_r$ were the same as in 
+Eq.~\ref{eqn:ME|SH|linearMatrix}, each element of the vector $\vec{w}_{\vec{\psi}}$
+was a number 
+$6!/(X!\, Y!\, T!) \big(\psi_{x}\big)^X
+	\big(\psi_{y}\big)^Y
+    \big(\psi_{t}\big)^T$,
+and $'$ denoted vector transposition.
+The product $\Big[ \alpha_{\textrm{collapse}}\, \textbf{M}^{-1} \Big]$ thus was a
+set $\vec{w}_{\vec{\psi}} = (w_{\vec{\psi},1}, \ldots, w_{\vec{\psi},28})$ of
+interpolated weights, where the $k$-th element determined the strength of the
+projection from the $k$-th \ac{V1} simple cell onto a \ac{V1} complex cell.
+The two cells were connected only if they were in a local spatial neighborhood
+(Eq.~\ref{eqn:ME|SH|complex}).
+A \ac{V1} complex cell received projections from \ac{V1} simple cells at all 
+three spatiotemporal resolutions, $r$.
+
+
+\subsection{Converting Filter Responses to Firing Rates}
+\label{sec:ME|V1|filter2mfr}
+
+In order to find a meaningful mapping from unit-less
+filter responses to neuronal mean firing rates,
+we opted to reproduce the contrast sensitivity
+function reported for V1 cells projecting to MT~\citep{MovshonNewsome1996}, 
+which is shown in Fig.~\ref{fig:ME|SH|contrast}. 
+The red line is the electrophysiological data adapted from 
+Fig.~$7$ of \cite{MovshonNewsome1996},
+whereas the blue line is our simulated
+data.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.8\textwidth]{me_contrast}
+  \caption{
+  The contrast sensitivity function of model V1 simple cells
+  (blue) is plotted against electrophysiological data adapted
+  from Fig.~$7$ of \cite{MovshonNewsome1996}.
+  Each data point is a V1 mean response to a drifting grating,
+  averaged over both \SI{1}{\second} of stimulus presentation
+  and all neurons in the subpopulation.
+  Vertical bars are the standard deviation on the population
+  average.}
+  \label{fig:ME|SH|contrast}
+\end{figure}
+
+In order to arrive at this plot, we presented a drifting
+sinusoidal grating of varying contrast to V1 simple cells
+coding for scale $r=0$, and computed their mean response $S_{k0}$
+from Eq.~\ref{eqn:ME|SH|simple}
+over a stimulation period of \SI{1}{\second}.
+The drifting grating
+had a spatial frequency of 
+$\omega_{\textrm{spat}} = 0.1205$~cycles per pixel
+and a temporal frequency of 
+$\omega_{\textrm{temp}} = 0.1808$~cycles per frame.
+Because the grating was drifting to the
+right, we only looked at the subpopulation of V1 simple cells
+that responded maximally to this stimulus (which was true for
+$k=24$). The mean firing rate of neurons in this subpopulation,
+$S_{24,0}$, was then averaged over all cells in the subpopulation and
+plotted in Fig.~\ref{fig:ME|SH|contrast} (blue curve) for 
+$\alpha_{\textrm{v1norm}} = 1.0$ and 
+$\alpha_{\textrm{filt} \rightarrow \textrm{rate},0} = \SI{15}{\hertz}$.
+Vertical bars are the standard deviation on the population
+average. The scaling factor $\alpha_{\textrm{v1norm}}$ was gradually
+changed until the curvature of the blue graph approximated
+the curvature of the electrophysiological data. The scaling
+factor $\alpha_{\textrm{filt} \rightarrow \textrm{rate},0}$
+was then adjusted such that the simulated
+responses saturated at approximately \SI{100}{\hertz}.
+In order to tune \ac{V1} simple cells at the other two scales, that
+is, $S_{k,1}$ and $S_{k,2}$ from Eq.~\ref{eqn:ME|SH|simple},
+we used a RDK stimulus, which is
+depicted as the sample input in Fig.~\ref{fig:ME|SH|V1}.
+We chose scaling factors that would give equal response magnitudes
+at all three scales in response to the RDK stimulus, 
+which resulted in 
+$\alpha_{\textrm{filt} \rightarrow \textrm{rate},1} = \SI{17}{\hertz}$
+and 
+$\alpha_{\textrm{filt} \rightarrow \textrm{rect},2} = \SI{11}{\hertz}$.
+
+
+\section{The Software}
+\label{sec:ME|CUDA}
+The software for this motion energy model is freely and publicly available 
+under the MIT license,
+and can be obtained from
+\url{https://github.com/UCI-CARL/MotionEnergy}.
+In order to run the code, users need to have the NVIDIA \ac{CUDA} Toolkit
+installed. 
+The code also easily integrates with other software development efforts 
+from the Cognitive Anteater Robotics Laboratory (CARL), such as 
+\texttt{VisualStimulus}\footnote{A MATLAB toolbox for generating,
+storing, and plotting 2D visual stimuli related to neuroscience such 
+as sinusoidal gratings, plaids, random dot fields, and noise:
+\url{https://github.com/UCI-CARL/VisualStimulusToolbox}.}
+and CARLsim (see Chapter~\ref{ch:SNN}).
+
+
+\subsection{User Interface}
+\label{sec:ME|CUDA|UI}
+
+For ease of use, both a C/C++ and Python user interface are provided.
+Both interfaces are based on functionality from the same underlying
+\ac{CUDA} code.
+Similar to the original C/MATLAB code by \cite{SimoncelliHeeger1998}, 
+a number of \ac{API} calls are provided that streamline the work flow.
+Using methods such as \texttt{MotionEnergy.calcV1linear} and
+\texttt{MotionEnergy.calcV1complex}, it is possible to easily retrieve
+simulated neural activity at various stages of the model.
+
+\begin{listing}[t]
+\caption{Motion Energy Python Interface}
+\vspace{-0.7cm}
+\inputminted{python}{listings/me_python_ui.py}
+\label{lst:ME|Python}
+\end{listing}
+
+An example is shown in Listing~\ref{lst:ME|Python}, where an input file is
+parsed that contains $2400$ frames of $32 \times 32$ pixel images depicting
+a sinusoidal gratings and plaids drifting in different directions.
+For convenience, two functions are provided that either read the header section
+of the input file (\texttt{read\_input\_header}, line $10$), 
+or retrieve the next frame in the file (\texttt{read\_input\_frame}, line $20$)
+(source code not shown).
+An input frame is then converted to a \ac{V1} complex cell response with a
+single \ac{API} call (line $23$).
+
+The resulting network activity is summarized as a tuning curve in
+Fig.~\ref{fig:ME|CUDA|V1}.
+Here, polar plots of \ac{V1} direction tuning were calculated in response
+to a sinusoidal grating (Fig.~\ref{fig:ME|CUDA|V1}A, B) and a plaid stimulus
+made of two superimposed sinusoidal gratings of equal contrast
+(Fig.~\ref{fig:ME|CUDA|V1}C, D), where the angle denotes motion direction and
+the radius indicates neuronal activity (arbitrary units).
+The direction tuning is unimodal for gratings, but bimodal for plaids.
+This is due to \ac{V1} complex cells picking up the motion direction of the
+individual grating components (black arrows in Fig.~\ref{fig:ME|CUDA|V1}C)
+instead of the overall direction of plaid motion 
+(red arrow in Fig.~\ref{fig:ME|CUDA|V1}C), which can only be inferred if the
+cell is able to solve the aperture problem.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.6\textwidth]{me_direction_v1}
+  \caption{
+  Polar plots of direction tuning for \ac{V1} complex cells in response to
+  a sinusoidal grating
+  (\textbf{A}, \textbf{B}) and a plaid stimulus 
+  (\textbf{C}, \textbf{D}) drifting upwards, where the angle
+  denotes motion direction and the radius is the simulated
+  neural activity (arbitrary units).
+  The plaid stimulus was constructed from two superimposed sine wave gratings
+  of equal contrast, drifting into two different directions (black arrows)
+  \SI{120}{\degree} apart. 
+  The red arrow indicates the perceived direction of motion.
+  }
+  \label{fig:ME|CUDA|V1}
+\end{figure}
+
+
+\subsection{Kernel}
+\label{sec:ME|CUDA|kernel}
+In order for our implementation to be useful to researchers
+already working with the S\&H model, we tried to stay as close
+to the S\&H C/MATLAB implementation as possible. However,
+there are a few minor differences worth mentioning. First, as
+explained in Section~\ref{sec:ME|V1|simple},
+we normalize \ac{V1} simple cell responses in a large Gaussian
+neighborhood rather than across the whole population.
+Second, whereas the S\&H model deals with edge effects by
+temporarily ``padding'' the input image with an invisible border,
+we opted for the computationally more economical alternative
+to simply decrease the responses of \ac{V1} simple cells
+located close to image borders. Third, in the S\&H C/MATLAB
+implementation there are two additional scaling factors (called
+\texttt{v1Blur} and \texttt{v1Complex}, 
+with values $0.99$ and $1.02$, respectively)
+that we do not apply in order to save execution
+time. Fourth, our model processes input images at three different
+scales as described in 
+Eqs.~\ref{eqn:ME|SH|stimuli1}--\ref{eqn:ME|SH|stimuli3},
+which is a feature that is not
+implemented in the original S\&H model.
+The most crucial mathematical operation in the \ac{V1} stage of
+the model is the convolution. Because the filter kernels used in
+our implementation are relatively small, employing the \ac{FFT}
+would actually hurt performance.
+Instead we perform all convolution operations in the space-time
+domain using a custom function, which makes use of the
+fact that the Gaussian filter and its derivative are dimensionally
+separable. Future work could be directed towards further
+optimizing the convolution operation in \ac{CUDA}.
+
+
+\subsection{Computational Performance}
+\label{sec:ME|CUDA|performance}
+
+In order to compare our \ac{CUDA} implementation of V1 
+to the original, unmodified S\&H
+implementation (which features code in both C and MATLAB)
+we computed V1 complex cell responses
+(see Section~\ref{sec:ME|V1|complex})
+at a single spatiotemporal
+scale to a drifting sinusoidal grating and recorded the
+model's execution time.
+The S\&H C/MATLAB code was executed
+as \texttt{shModel(stim, pars, 'v1Complex')},
+where \texttt{stim} was the input stimulus, 
+and \texttt{pars} were the default parameters (\texttt{shPars}).
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\textwidth]{me_performance}
+  \caption{
+  \textbf{A}, Execution time of a MATLAB implementation (blue) of
+  V1 complex cells versus a \ac{CUDA} implementation (red).
+  \textbf{B}, Observed memory usage for the MATLAB implementation
+  (blue) and \ac{CUDA} implementation (red).}
+  \label{fig:ME|CUDA|performance}
+\end{figure}
+
+Fig.~\ref{fig:ME|CUDA|performance}A shows the execution time
+per video frame for both models. Our \ac{GPU} implementation
+(red) was not only faster (except for relatively small networks)
+than the S\&H C/MATLAB implementation (blue), but it also
+scaled better with network size. Note that the C/MATLAB implementation
+was a single-threaded computation. The largest
+speedup, a factor of $12$, was observed for a network consisting
+of $96\times96=9,216$ neurons. It is likely that even greater
+speedups could have been achieved on larger networks, but
+these networks could not run with the S\&H C/MATLAB implementation
+because they ran out of memory. Timing was
+performed using standard commands \texttt{tic} and \texttt{toc} in
+MATLAB, and the \texttt{<ctime>} function \texttt{time}
+in C++/\ac{CUDA}.
+For the S\&H C/MATLAB implementation, the time it took to
+create the stimulus was not included in the time measurement.
+On the other hand, in the \ac{CUDA} implementation the stimulus
+had to be read from file frame-by-frame and copied to the
+\ac{GPU} card. However, we did not include the time it takes to
+transfer the response back from the device to the host.
+
+Additionally, the S\&H C/MATLAB implementation is
+memory-intensive (see Fig.~\ref{fig:ME|CUDA|performance}B), 
+and execution times for networks
+above size $128\times128=16,384$ could not be computed
+because the \ac{CPU} ran out of memory, even though we had a
+relatively large amount of \ac{RAM} (\SI{24}{\giga\byte}) available. 
+Measuring memory usage in MATLAB is not straight-forward.
+In order to demonstrate the excessive memory consumption of the S\&H
+C/MATLAB implementation (see Fig.~\ref{fig:ME|CUDA|performance}B)
+we opted to measure two metrics: 
+the size of the output argument ans to function
+call \texttt{shModel} (blue, filled circle in 
+Fig.~\ref{fig:ME|CUDA|performance}B) and the maximum
+memory usage of the MATLAB process at any point in time
+(blue, open circle). The first was measured with native
+MATLAB command \texttt{whos}, and the latter was measured by
+running a bash script in the background that reported the
+memory usage of the process every second (using linux command
+\texttt{ps}). The blue dashed line is the \SI{24}{\giga\byte}
+limit of the system's \ac{RAM}. 
+Note the log scale on the ordinate. Less
+memory was required to run the process than to store the
+output argument, which consisted of a matrix whose size
+was proportional to the product of the stimulus dimensions
+and the number of frames. A straightforward way of making
+the S\&H C/MATLAB implementation capable of handling large
+inputs would thus be to break up the output argument into
+smaller chunks of data. On the other hand, the memory usage
+of the \ac{GPU} implementation was significantly lower (red line
+in Fig.~\ref{fig:ME|CUDA|performance}B)
+and scaled better with network size. We used the
+\ac{CUDA} command \texttt{cuMemGetInfo} to identify the amount
+of allocated memory on the \ac{GPU}. The red dashed line is the
+upper limit of \ac{GPU} memory available to the user (roughly
+\SI{5.2}{\giga\byte} on our card).
+
+

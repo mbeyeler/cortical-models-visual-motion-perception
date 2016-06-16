@@ -1,0 +1,229 @@
+\chapter{Introduction}
+
+\section{Motivation}
+\label{sec:intro|motivation}
+Animals are capable of traversing novel cluttered environments with apparent ease.
+In particular, terrestrial mammals use vision to routinely scan the environment, 
+avoid obstacles, and approach goals.
+Such sensorimotor tasks require the simultaneous integration 
+of perceptual variables within the visual scene 
+in order to rapidly execute a series of finely tuned motor commands.
+Evidence suggests that these functions might be mediated 
+by a visual motion pathway in the mammalian brain
+\citep{Britten2008,Orban2008};
+that is, a densely interconnected network of dedicated brain regions,
+where visual information flows from
+the visual cortex (including the \acf{V1}, the \acf{MT}, and the \acf{MST};
+which will be the focus of this thesis)
+along the dorsal stream onto the \acf{PPC} on to the motor cortex.
+Understanding how humans and other animals integrate visual motion information
+to adeptly move around in the environment 
+would require simultaneously recording
+from all of these areas at a fine temporal and spatial scale---all while the
+animal is performing a behavioral task.
+
+Whereas it is possible today to record from either individual cells
+(e.g., using extracellular single-unit recordings) or from entire brain areas
+on the order of $10^7$ neurons (e.g., using \ac{fMRI} or \ac{EEG}),
+it is still difficult to record at the microcircuit ($10^2-10^4$ neurons)
+and mesocircuit ($10^4-10^7$ neurons) scales,
+which are believed to be the scales at which phenomena such as perception, emotion,
+and understanding begin to take shape \citep{Alivisatos2012}.
+As a result of these limitations, empirical findings typically provide
+only limited insight into how activity in microcircuits and mesocircuits
+might relate to visual motion perception and active behavior under
+natural conditions.
+On one hand, although there have been studies on the behavioral dynamics of 
+steering in humans \citep{FajenWarren2003,WilkieWann2003}, 
+only recently did researchers begin to ask
+whether individual behavioral performance is reflected in specific
+cortical regions \citep{Billington2013,Field2007}.
+On the other hand, despite a wealth of data regarding the neural
+microcircuitry concerned with the perception of self-motion variables
+such as the current direction of travel (``heading'') 
+\citep{BrittenVanWezel1998,DuffyWurtz1997,Gu2006}
+or the perceived position and speed of objects
+\citep{EifukuWurtz1998,Tanaka1993},
+little research has been devoted to investigating how this
+circuitry may relate to active steering control.
+%
+% These constraints pose severe problems for current empirical protocols and
+% recording techniques.
+% First, there is currently no recording technique that can simultaneously record
+% from multiple brain regions at both high spatial and temporal resolution.
+% For example, high spatial resolution can be achieved with electrophysiological
+% recordings (e.g., extracellular single-unit recordings, patch clamps), which can 
+% measure the activity of one or several neurons.
+% This technique is limited, however, to isolated cells in a single brain area.
+% In order to measure activity on a brain-wide scale, the most commonly used
+% experimental techniques include \ac{fMRI}, \ac{EEG}, and \ac{MEG}, which can achieve
+% high temporal resolution, but have poor spatial resolution.
+% Each electrode in an \ac{EEG} experiment, for example, is likely to pick up the 
+% activity of $10^7$ neurons.
+% Second, it is difficult to perform intricate recordings when an animal is behaving.
+% Magnets used in \ac{fMRI} are large and immobile, and neurophysiological equipment
+% runs the risk of being misplaced or damaged under free-movement conditions.
+% Thus, most behavioral studies are restricted to psychophysical paradigms.
+% % There are a few exceptions, however, like the experimental setups of the
+% % Wurtz and Angelaki labs, which place subjects on a primate chair that is mounted
+% % onto a motorized sled. This way, it is possible to record from brain regions of
+% % interest while the animal is being physically displaced, which has led to some
+% % fundamental insight into the cortical processing of optic flow during self-movement
+% % \citep{Gu2006,Takahashi2007,Page2015}.
+%
+
+Meso-scale neural network simulations, on the other hand,
+have the potential to overcome these limitations.
+Thanks to recent developments in high-performance computing, 
+it is now possible to simulate \acfp{SNN} on the order of $10^5-10^6$ neurons
+on a single off-the-shelf \acf{GPU} in close to real time.
+By taking into account computational and organizational principles of cortical
+circuits, gleaned from electrophysiological and neuroanatomical evidence,
+we can gain insight into the guiding computational principles that make these
+networks so powerful.
+In contrast to empirical experiments, computer simulations allow to
+monitor and manipulate any variable in any neuron or synapse.
+This is a powerful approach that could allow
+neuroscientists to eventually build a mechanistic understanding
+of meso-scale brain architectures and their functional importance,
+and computer scientists could be able to extract the underlying computational
+principles and condense them into abstract algorithms.
+Second, by integrating these models into autonomous brain-inspired robots,
+we can study (in real time) the link between neural circuitry 
+and a system's behavior in specific tasks, 
+offering new theories of brain function and
+stimulating future experimental research.
+
+
+
+\section{Contribution}
+\label{sec:intro|contribution}
+
+The main goal of this thesis is to investigate the computational principles that
+the mammalian brain might be using to accurately and efficiently integrate
+low-level motion signals into coherent percepts, 
+how inferred perceptual variables might be represented at the population level,
+and how neural activity in these populations might relate to behavior in
+visually guided navigation tasks.
+
+This research encompasses the design of computational models that reason about
+visual motion information in a way that is comparable to the mammalian brain,
+the development of open-source software libraries 
+that provide the means to study these models,
+and the conception of robotic systems that can evaluate 
+both theories and simulations in a real-world environment.
+As a result of these efforts, the contributions of this thesis span multiple
+disciplines including computer science, computational neuroscience, and robotics.
+
+In specific, the contributions of this thesis include:
+\begin{itemize}
+\item A large-scale \ac{SNN} model of cortical areas \ac{V1} and \ac{MT}, 
+    whose simulated neural activity replicates data recorded \emph{in vivo},
+    and whose behavioral response emulates human choice accuracy 
+    in a motion discrimination task.
+	The model demonstrates how the aperture problem, a fundamental conceptual
+    challenge encountered by all low-level motion systems, can be
+	solved in a biologically detailed \ac{SNN},
+	relying solely on dynamics and properties 
+    gleaned from known electrophysiological and neuroanatomical evidence,
+    and how this neural activity might influence perceptual decision-making.
+    
+\item The deployment of said \ac{SNN} model on a robotics platform, used to steer
+	the robot around obstacles while approaching a visually salient target,
+    making steering decisions based solely on
+    simulated neural activity generated from visual input.
+    The study demonstrates how a model of \ac{MT} might build a 
+    cortical representation of optic flow in the spiking domain, 
+    and shows---for the first time---that
+    these simulated motion signals are sufficient to steer a physical robot on
+    human-like smooth paths around obstacles in the real world.
+
+\item A computational model of optic flow processing in \acf{MSTd}, 
+	demonstrating that a wide range of neuronal response properties of \ac{MSTd}
+    neurons can be derived from \ac{MT}-like input features,
+    based on a dimensionality reduction technique known as \acf{NMF}.
+    This finding suggests that response properties such as 3D translation and
+    rotation selectivity, complex motion perception, and heading selectivity
+    might simply be a by-product of \ac{MSTd} neurons performing dimensionality
+    reduction on their inputs.
+    
+\item CARLsim 3, an efficient open-source software environment developed as a group
+	effort in the \ac{CARL} at the University of California, Irvine. 
+    This C/C++ software is designed to aid in the conceptualization, utilization, 
+    and research of brain circuit
+    models of up to $10^6$ neurons and $10^8$ synapses by leveraging 
+    off-the-shelf NVIDIA \acp{GPU}.
+    
+\item An efficient and scalable open-source software implementation of the
+	Motion Energy \citep{SimoncelliHeeger1998}, the \emph{de facto}
+    standard cortical model for visual motion integration.
+    This software outperforms Simoncelli and Heeger's own implementation by
+    orders of magnitude in terms of computational speed and memory usage,
+    which enabled the practical feasibility of the empirical studies mentioned above.
+\end{itemize}
+
+The hope is that these studies will not only further our understanding of
+how the brain works, but also lead to novel algorithms and computing systems
+capable of outperforming current artificial systems.
+
+
+\section{Organization}
+
+The remainder of this thesis is organized as follows.
+
+Chapter~\ref{ch:background} provides some theoretical background on computational
+vision as well as the visual motion pathway in the mammalian brain.
+First, general conceptual challenges in visual motion processing are briefly 
+reviewed---such as the correspondence problem and aperture problem---and
+possible mechanistic solutions for these problems are discussed.
+Second, a brief overview is given  of cortical areas 
+that are involved in visual motion processing in the mammalian brain.
+Third, different approaches to modeling the brain are discussed.
+
+Chapter~\ref{ch:SNN} introduces CARLsim, the open-source software framework
+used in Chapters~\ref{ch:MT} and \ref{ch:ABR} to study the
+cortical mechanisms of visual motion integration at the neural-circuit level.
+The chapter gives an overview of CARLsim's user interface,
+highlights architectural and algorithmic challenges overcome during development,
+summarizes its computational performance, and discusses related work.
+
+Chapter~\ref{ch:ME} introduces an efficient and scalable software implementation 
+of the Motion Energy model by \cite{SimoncelliHeeger1998}.
+The chapter gives both a conceptual explanation of the model as well as an overview
+of the software's user interface.
+The software's computational performance is also analyzed.
+The development of this software, in combination with CARLsim, enabled the
+practical feasibility of the studies described in Chapters~\ref{ch:MT} and
+\ref{ch:ABR}.
+
+Chapter~\ref{ch:MT} describes results from an \ac{SNN} model of visual motion
+integration, modeled after cortical areas \ac{V1} and \ac{MT}.
+The purpose of this model was to understand how the aperture problem could be
+solved in a biologically detailed \ac{SNN},
+relying solely on dynamics and properties gleaned from known electrophysiological
+and neuroanatomical evidence.
+The chapter summarizes results from both simulated neural activity as well as
+behavioral performance in a motion discrimination task.
+
+Chapter~\ref{ch:ABR} describes the deployment of the \ac{SNN} model outlined in
+Chapter~\ref{ch:MT} on a robotics platform, and summarizes behavioral results
+of the robot performing a visually guided navigation task.
+The purpose of this model was to investigate how a simulated cortical representation
+of optic flow in \ac{MT} might relate to perceptual decision-making 
+as well as active steering control.
+The chapter summarizes results from both simulated neural activity as well as
+behavioral performance in a reactive navigation task.
+
+Chapter~\ref{ch:MSTd} introduces a novel computational model of optic flow
+processing in \ac{MSTd}, based on principles of the \acf{ECH}.
+The purpose of this model was to demonstrate that a wide range of neuronal
+response properties of \ac{MSTd} neurons could be derived from \ac{MT}-like
+input features, suggesting that these empirically observed properties 
+might emerge from a statistically efficient representation of optic flow.
+The chapter compares simulated neural activity to a variety of empirical findings,
+and aims to provide some structure to the multiple and often conflicting
+results from \ac{MSTd} electrophysiology and modeling studies.
+
+Chapter~\ref{ch:conclusion} presents the main conclusions defended in this
+thesis, discusses limitations of the work, and outlines possible avenues for
+future studies.
